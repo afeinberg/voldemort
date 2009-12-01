@@ -528,6 +528,15 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
     }
 
     /**
+     * See issue #118: We need to finish the implementation of Hinted Handoff. Present attempt at doing it uses
+     * the {@link voldemort.store.slop.SloppyStore} mechanism, which doesn't take into account that the
+     * vector clock may be wrong if we do not yet know what the ultimate master node is.
+     */
+    public void testHintedHandOff() {
+
+    }
+
+    /**
      * See issue #134: RoutedStore put() doesn't wait for enough attempts to
      * succeed
      * 
