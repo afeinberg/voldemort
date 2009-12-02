@@ -19,11 +19,7 @@ package voldemort.store.routed;
 import static voldemort.TestUtils.getClock;
 import static voldemort.VoldemortTestConstants.getNineNodeCluster;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import voldemort.ServerTestUtils;
 import voldemort.TestUtils;
@@ -32,6 +28,8 @@ import voldemort.VoldemortTestConstants;
 import voldemort.client.RoutingTier;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.routing.ConsistentRoutingStrategy;
+import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyType;
 import voldemort.serialization.SerializerDefinition;
 import voldemort.store.AbstractByteArrayStoreTest;
@@ -135,6 +133,47 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
                                threads,
                                true,
                                1000L);
+    }
+
+    private RoutedStore getSloppyQuorumStore(Cluster cluster,
+                                             int replicas,
+                                             int reads,
+                                             int writes,
+                                             int threads,
+                                             int failing,
+                                             int sleepy) {
+        Map<Integer, Store<ByteArray,byte[]>> subStores = Maps.newHashMap();
+        int count = 0;
+        for(Node n: cluster.getNodes()) {
+            if(count >= cluster.getNumberOfNodes())
+                throw new IllegalArgumentException(failing + " failing nodes, " + sleepy
+                                                   + " sleepy nodes, but only "
+                                                   + cluster.getNumberOfNodes()
+                                                   + " nodes in the cluster.");
+            else if(count < failing)
+                subStores.put(n.getId(), new FailingStore<ByteArray, byte[]>("test", new VoldemortException()));
+            else if(count < failing + sleepy)
+                subStores.put(n.getId(),
+                              new SleepyStore<ByteArray, byte[]>(Long.MAX_VALUE,
+                                                                 new InMemoryStorageEngine<ByteArray, byte[]>("test")));
+            else
+                subStores.put(n.getId(), new InMemoryStorageEngine<ByteArray, byte[]>("test"));
+
+            count += 1;
+        }
+        return new RoutedStore("test",
+                subStores,
+                cluster,
+                ServerTestUtils.getStoreDef("test",
+                        replicas,
+                        reads,
+                        reads,
+                        writes,
+                        writes,
+                        RoutingStrategyType.TO_ALL_STRATEGY),
+                threads,
+                true,
+                1000L);
     }
 
     private int countOccurances(RoutedStore routedStore, ByteArray key, Versioned<byte[]> value) {
@@ -532,8 +571,49 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
      * the {@link voldemort.store.slop.SloppyStore} mechanism, which doesn't take into account that the
      * vector clock may be wrong if we do not yet know what the ultimate master node is.
      */
-    public void testHintedHandOff() {
+    public void testHintedHandOff() throws InterruptedException {
+        Cluster cluster = getNineNodeCluster();
 
+        // Disable node 1, the master for this put should now be last node.
+        Iterables.get(cluster.getNodes(), 1).getStatus().setUnavailable();
+
+        RoutedStore routedStore = getSloppyQuorumStore(cluster,
+                4,
+                2,
+                2,
+                1,
+                0,
+                0);
+        Store<ByteArray, byte[]> store = new InconsistencyResolvingStore<ByteArray, byte[]>(routedStore,
+                new VectorClockInconsistencyResolver<byte[]>());
+
+        store.put(aKey, new Versioned<byte[]>(aValue));
+        VectorClock correctVectorClock = (VectorClock) store.getVersions(aKey).get(0);
+
+        Thread.sleep(100);
+        Iterables.get(cluster.getNodes(), 1).getStatus().setAvailable();
+        
+        // The value should have been handed off to another node. Wait for it to wake up and
+        // hand off to finish.
+
+        Thread.sleep(100);
+
+        Map<Integer, Store<ByteArray,byte[]>> stores = routedStore.getInnerStores();
+        Store<ByteArray, byte[]> recoveredStore = stores.get(1);
+
+        // Do we have only one version?
+        List<Version> recoveredVersionList = recoveredStore.getVersions(aKey);
+        assertEquals(1, recoveredVersionList.size());
+
+        // Is it the correct value?
+        assertEquals(aValue, recoveredStore.get(aKey).get(0).getValue());
+
+        // Are the vector clock entries correct?
+        VectorClock recoveredVectorClock = (VectorClock) recoveredVersionList.get(0);
+        assertEquals(correctVectorClock.getEntries(), recoveredVectorClock.getEntries());
+
+
+        
     }
 
     /**
