@@ -224,9 +224,9 @@ public class Ec2RebalancingTest {
 
                             nodeKilled.await();
                             if (logger.isInfoEnabled())
-                                logger.info("Waiting for five seconds for rebalancing to retry");
+                                logger.info("Waiting for five second for restart to retry");
 
-                            Thread.sleep(10000);
+                            Thread.sleep(5000);
 
                             AdminClient adminClient = new AdminClient(getBootstrapUrl(originalCluster, 0),
                                                                       new AdminClientConfig());
