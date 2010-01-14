@@ -31,10 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import voldemort.TestUtils;
-import voldemort.client.ClientConfig;
-import voldemort.client.SocketStoreClientFactory;
-import voldemort.client.StoreClient;
-import voldemort.client.StoreClientFactory;
+import voldemort.client.*;
 import voldemort.utils.CmdUtils;
 import voldemort.versioning.Versioned;
 
@@ -74,6 +71,7 @@ public class RemoteTest {
         parser.accepts("r", "execute read operations");
         parser.accepts("w", "execute write operations");
         parser.accepts("d", "execute delete operations");
+        parser.accepts("m", "mix reads and writes");
         parser.accepts("request-file", "execute specific requests in order").withRequiredArg();
         parser.accepts("start-key-index", "starting point when using int keys. Default = 0")
               .withRequiredArg()
@@ -91,7 +89,7 @@ public class RemoteTest {
         OptionSet options = parser.parse(args);
 
         List<String> nonOptions = options.nonOptionArguments();
-        if(nonOptions.size() != 3) {
+        if(nonOptions.size() < 3) {
             printUsage(System.err, parser);
         }
 
@@ -118,6 +116,9 @@ public class RemoteTest {
         }
         if(options.has("d")) {
             ops += "d";
+        }
+        if (options.has("m")) {
+            ops += "m";
         }
 
         if(ops.length() == 0) {
@@ -153,10 +154,51 @@ public class RemoteTest {
         store.put(key, new Versioned<String>(value));
         store.delete(key);
 
-         for (int loopCount=0; loopCount < numIterations; loopCount++) {
+        for (int loopCount=0; loopCount < numIterations; loopCount++) {
 
-             System.out.println("======================= iteration = " + loopCount + " ======================================");
-     
+            System.out.println("======================= iteration = " + loopCount + " ======================================");
+
+
+            if (ops.contains("m")) {
+                System.out.println("Beginning interpolation test (read-and-write)");
+                final AtomicInteger successes = new AtomicInteger(0);
+                final AtomicInteger reads = new AtomicInteger(0);
+                final AtomicInteger writes = new AtomicInteger(0);
+                final KeyProvider keyProvider0 = new KeyProvider(startNum, keys);
+                final CountDownLatch latch0 = new CountDownLatch(numRequests);
+                long start = System.currentTimeMillis();
+                for (int i = 0; i < numRequests; i++) {
+                    service.execute(new Runnable() {
+                        public void run() {
+                            try {
+                                final String key = keyProvider0.next();
+                                final Versioned<String> value = store.get(key);
+                                reads.incrementAndGet();
+                                if (value != null) {
+                                    store.applyUpdate(new UpdateAction<String,String>() {
+                                        @Override
+                                        public void update(StoreClient<String, String> stringStringStoreClient) {
+                                            store.put(key, value);
+                                            writes.incrementAndGet();
+                                        }
+                                    });
+                                }
+                                successes.getAndIncrement();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                latch0.countDown();
+                            }
+                        }
+                    });
+                }
+                latch0.await();
+                long totalTime = System.currentTimeMillis() - start;
+                System.out.println("Throughput: " + (numRequests/(float) totalTime * 1000) + " transactions/sec.");
+                System.out.println(numRequests + " requests made.");
+                System.out.println(writes.get() + " writes performed.");
+                System.out.println(successes.get() + " successful transactions.");
+            }
             if(ops.contains("d")) {
                 System.out.println("Beginning delete test.");
                 final AtomicInteger successes = new AtomicInteger(0);
