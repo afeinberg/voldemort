@@ -37,6 +37,8 @@ import voldemort.client.SocketStoreClientFactory;
 import voldemort.client.StoreClient;
 import voldemort.client.StoreClientFactory;
 import voldemort.utils.CmdUtils;
+import voldemort.versioning.Occured;
+import voldemort.versioning.VectorClock;
 import voldemort.versioning.Versioned;
 
 public class RemoteTest {
@@ -73,6 +75,7 @@ public class RemoteTest {
 
         OptionParser parser = new OptionParser();
         parser.accepts("r", "execute read operations");
+        parser.accepts("m", "execute a mix of reads and writes");
         parser.accepts("w", "execute write operations");
         parser.accepts("d", "execute delete operations");
         parser.accepts("request-file", "execute specific requests in order").withRequiredArg();
@@ -120,7 +123,9 @@ public class RemoteTest {
         if(options.has("d")) {
             ops += "d";
         }
-
+        if (options.has("m")) {
+            ops += "m";
+        }
         if(ops.length() == 0) {
             ops = "rwd";
         }
@@ -216,6 +221,43 @@ public class RemoteTest {
                 long writeTime = System.currentTimeMillis() - start;
                 System.out.println("Throughput: " + (numRequests / (float) writeTime * 1000)
                                    + " writes/sec.");
+            }
+
+            if (ops.contains("m")) {
+                System.out.println("Beginning mixed read/write test.");
+                final KeyProvider keyProvider = new KeyProvider(startNum, keys);
+                final CountDownLatch latch = new CountDownLatch(numRequests);
+                long start = System.currentTimeMillis();
+                keyProvider.next();
+                for (int i = 0; i < numRequests; i++) {
+                    service.execute(new Runnable() {
+
+                        public void run() {
+                            try {
+                                String key = keyProvider.next();
+                                Versioned<String> v = store.get(key);
+
+                                if (v == null) {
+                                    throw new Exception("value return is null for key " + key);
+                                }
+                                // write my read
+                                store.put(key, v.getValue());
+                                Versioned<String> v2 = store.get(key);
+                                Occured occured = v2.getVersion().compare(v.getVersion());
+                                if (occured != Occured.AFTER) {
+                                    System.err.println("clock for v1: " + (VectorClock)v.getVersion() + "\n"
+                                                       + "clock for v2: " + (VectorClock)v2.getVersion());
+                                    throw new Exception("stale value for key " + key);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                latch.countDown();
+                            }
+                        }
+                    });
+                }
+                latch.await();
             }
 
             if(ops.contains("r")) {
