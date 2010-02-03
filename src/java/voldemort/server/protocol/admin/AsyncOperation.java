@@ -39,6 +39,10 @@ public abstract class AsyncOperation implements Runnable {
         markComplete();
     }
 
+    public String toString() {
+        return getStatus().toString();
+    }
+
     abstract public void operate() throws Exception;
 
     @JmxOperation
