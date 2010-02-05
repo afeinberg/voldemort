@@ -42,7 +42,7 @@ done
 CLASSPATH=$CLASSPATH:$base_dir/dist/resources
 
 if [ -z $VOLD_OPTS ]; then
-  VOLD_OPTS="-Xmx2G -server -Dcom.sun.management.jmxremote"
+  VOLD_OPTS="-agentlib:hprof=cpu=samples -Xmx18G -server -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=5050 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -XX:NewSize=2048m -XX:MaxNewSize=2048m -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:CMSInitiatingOccupancyFraction=70 -XX:SurvivorRatio=2"
 fi
 
 java -Dlog4j.configuration=src/java/log4j.properties $VOLD_OPTS -cp $CLASSPATH voldemort.server.VoldemortServer $@
