@@ -537,7 +537,6 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
 
         @Override
         protected void moveCursor(DatabaseEntry key, DatabaseEntry value) throws DatabaseException {
-            value.setPartial(0, 0, true);
             cursor.getNextNoDup(key, value, LockMode.READ_UNCOMMITTED);
         }
 
