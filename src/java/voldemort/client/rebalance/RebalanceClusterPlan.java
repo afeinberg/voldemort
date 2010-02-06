@@ -1,12 +1,6 @@
 package voldemort.client.rebalance;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -78,7 +72,9 @@ public class RebalanceClusterPlan {
                                                                                      currentPartitionsToNodeMap);
 
         List<RebalancePartitionsInfo> stealInfoList = new ArrayList<RebalancePartitionsInfo>();
-        for(Node donorNode: currentCluster.getNodes()) {
+        List<Node> shuffledNodes = new ArrayList<Node>(currentCluster.getNodes());
+        Collections.shuffle(shuffledNodes);
+        for(Node donorNode: shuffledNodes) {
             Set<Integer> stealPartitions = new HashSet<Integer>();
             Set<Integer> deletePartitions = new HashSet<Integer>();
 
