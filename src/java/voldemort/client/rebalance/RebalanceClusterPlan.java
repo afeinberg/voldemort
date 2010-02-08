@@ -18,14 +18,14 @@ import com.google.common.collect.Multimap;
  * targetConfiguration and returns a map of Target node-id to map of source
  * node-ids and partitions desired to be stolen/fetched.<br>
  * <b> returned Queue is threadsafe </b>
- * 
- * @param currentCluster
- * @param targetCluster
  */
 public class RebalanceClusterPlan {
 
     private final Queue<RebalanceNodePlan> rebalanceTaskQueue;
     private final List<StoreDefinition> storeDefList;
+    private final Random random;
+
+    private final static long SEED = 5276239082346L;
 
     public RebalanceClusterPlan(Cluster currentCluster,
                                 Cluster targetCluster,
@@ -33,6 +33,7 @@ public class RebalanceClusterPlan {
                                 boolean deleteDonorPartition) {
         this.rebalanceTaskQueue = new ConcurrentLinkedQueue<RebalanceNodePlan>();
         this.storeDefList = storeDefList;
+        this.random = new Random(SEED);
 
         if(currentCluster.getNumberOfPartitions() != targetCluster.getNumberOfPartitions())
             throw new VoldemortException("Total number of partitions should not change !!");
@@ -73,7 +74,7 @@ public class RebalanceClusterPlan {
 
         List<RebalancePartitionsInfo> stealInfoList = new ArrayList<RebalancePartitionsInfo>();
         List<Node> shuffledNodes = new ArrayList<Node>(currentCluster.getNodes());
-        Collections.shuffle(shuffledNodes);
+        Collections.shuffle(shuffledNodes, random);
         for(Node donorNode: shuffledNodes) {
             Set<Integer> stealPartitions = new HashSet<Integer>();
             Set<Integer> deletePartitions = new HashSet<Integer>();

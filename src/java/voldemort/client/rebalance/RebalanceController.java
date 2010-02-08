@@ -1,9 +1,6 @@
 package voldemort.client.rebalance;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -28,10 +25,12 @@ import voldemort.versioning.Versioned;
 public class RebalanceController {
 
     private static final int MAX_TRIES = 2;
+    private final static long SEED = 5276239082346L;
 
     private static Logger logger = Logger.getLogger(RebalanceController.class);
 
     private final AdminClient adminClient;
+    private final Random random = new Random(SEED);
     RebalanceClientConfig rebalanceConfig;
 
     public RebalanceController(String bootstrapUrl, RebalanceClientConfig rebalanceConfig) {
@@ -85,8 +84,8 @@ public class RebalanceController {
      * The cluster is kept consistent during rebalancing using a proxy mechanism
      * via {@link RedirectingStore}<br>
      * 
-     * 
-     * @param targetCluster: target Cluster configuration
+     * @param currentCluster Current cluster configuration
+     * @param targetCluster Target cluster configuration
      */
     public void rebalance(Cluster currentCluster, final Cluster targetCluster) {
         logger.debug("Current Cluster configuration:" + currentCluster);
@@ -115,10 +114,8 @@ public class RebalanceController {
                                         new ArrayList<Integer>());
 
         ExecutorService executor = createExecutors(rebalanceConfig.getMaxParallelRebalancing());
-
-        // seed random with different seeds
-        final Random random = new Random();
-
+        
+        final Set<Integer> currentDonors = Collections.synchronizedSet(new HashSet<Integer>());
         // start all threads
         for(int nThreads = 0; nThreads < this.rebalanceConfig.getMaxParallelRebalancing(); nThreads++) {
             executor.execute(new Runnable() {
@@ -134,8 +131,13 @@ public class RebalanceController {
                             List<RebalancePartitionsInfo> rebalanceSubTaskList = rebalanceTask.getRebalanceTaskList();
 
                             while(rebalanceSubTaskList.size() > 0) {
-                                int index = (int) (random.nextDouble() * rebalanceSubTaskList.size());
-                                RebalancePartitionsInfo rebalanceSubTask = rebalanceSubTaskList.remove(index);
+                                int index;
+                                RebalancePartitionsInfo rebalanceSubTask;
+                                do {
+                                    index = random.nextInt(rebalanceSubTaskList.size());
+                                } while (currentDonors.contains(rebalanceSubTaskList.get(index).getDonorId()));
+                                rebalanceSubTask = rebalanceSubTaskList.remove(index);
+                                currentDonors.add(rebalanceSubTask.getDonorId());
                                 logger.info("Starting rebalancing for stealerNode:" + stealerNodeId
                                             + " with rebalanceInfo:" + rebalanceSubTask);
 
@@ -239,8 +241,7 @@ public class RebalanceController {
      * donorNode).<br>
      * holds a lock untill the commit/revert finishes.
      * 
-     * @param stealPartitionsMap
-     * @param stealerNodeId
+     * @param stealerNode
      * @param rebalanceStealInfo
      * @throws Exception
      */
