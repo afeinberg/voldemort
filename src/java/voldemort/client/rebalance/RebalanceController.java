@@ -131,11 +131,13 @@ public class RebalanceController {
                             List<RebalancePartitionsInfo> rebalanceSubTaskList = rebalanceTask.getRebalanceTaskList();
 
                             while(rebalanceSubTaskList.size() > 0) {
-                                int index;
+                                int index = random.nextInt(rebalanceSubTaskList.size());
                                 RebalancePartitionsInfo rebalanceSubTask;
-                                do {
+
+                                if (currentDonors.contains(rebalanceSubTaskList.get(index).getDonorId()) &&
+                                    rebalanceSubTaskList.size() > 1) {
                                     index = random.nextInt(rebalanceSubTaskList.size());
-                                } while (currentDonors.contains(rebalanceSubTaskList.get(index).getDonorId()));
+                                }
                                 rebalanceSubTask = rebalanceSubTaskList.remove(index);
                                 currentDonors.add(rebalanceSubTask.getDonorId());
                                 logger.info("Starting rebalancing for stealerNode:" + stealerNodeId
