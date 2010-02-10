@@ -87,7 +87,8 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
 
     private boolean redirectingKey(ByteArray key) {
         return MetadataStore.VoldemortState.REBALANCING_MASTER_SERVER.equals(metadata.getServerState())
-               && metadata.getRebalancingStealInfo().getUnbalancedStoreList().contains(getName())
+               && !metadata.getRebalancingStealInfo().isEmpty()
+               && metadata.getRebalancingStealInfo().get(0).getUnbalancedStoreList().contains(getName())
                && checkKeyBelongsToStolenPartitions(key);
     }
 
@@ -148,7 +149,7 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
 
     protected boolean checkKeyBelongsToStolenPartitions(ByteArray key) {
         for(int partitionId: metadata.getRoutingStrategy(getName()).getPartitionList(key.get())) {
-            if(metadata.getRebalancingStealInfo().getPartitionList().contains(partitionId)) {
+            if(metadata.getRebalancingStealInfo().get(0).getPartitionList().contains(partitionId)) {
                 return true;
             }
         }
@@ -164,12 +165,14 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
      */
     private List<Versioned<byte[]>> proxyGet(ByteArray key) throws VoldemortException {
         Node donorNode = metadata.getCluster().getNodeById(metadata.getRebalancingStealInfo()
+                                                                   .get(0)
                                                                    .getDonorId());
         checkNodeAvailable(donorNode);
         long start = System.currentTimeMillis();
         try {
             List<Versioned<byte[]>> values = getRedirectingSocketStore(getName(),
                                                                        metadata.getRebalancingStealInfo()
+                                                                               .get(0)
                                                                                .getDonorId()).get(key);
             failureDetector.recordSuccess(donorNode, System.currentTimeMillis() - start);
             return values;
@@ -194,13 +197,14 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
      */
     private Map<ByteArray, List<Versioned<byte[]>>> proxyGetAll(Iterable<ByteArray> keys)
             throws VoldemortException {
-        Node donorNode = metadata.getCluster().getNodeById(metadata.getRebalancingStealInfo()
+        Node donorNode = metadata.getCluster().getNodeById(metadata.getRebalancingStealInfo().get(0)
                                                                    .getDonorId());
         checkNodeAvailable(donorNode);
         long start = System.currentTimeMillis();
         try {
             Map<ByteArray, List<Versioned<byte[]>>> map = getRedirectingSocketStore(getName(),
                                                                                     metadata.getRebalancingStealInfo()
+                                                                                            .get(0)
                                                                                             .getDonorId()).getAll(keys);
             failureDetector.recordSuccess(donorNode, System.currentTimeMillis() - start);
             return map;

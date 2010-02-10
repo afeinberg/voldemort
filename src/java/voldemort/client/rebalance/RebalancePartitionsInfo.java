@@ -88,11 +88,11 @@ public class RebalancePartitionsInfo {
         List<Integer> deletePartitionsList = (List<Integer>) map.get("deletePartitionsList");
         List<String> unbalancedStoreList = (List<String>) map.get("unbalancedStoreList");
         return new RebalancePartitionsInfo(stealerId,
-                                            donorId,
-                                            partitionList,
-                                            deletePartitionsList,
-                                            unbalancedStoreList,
-                                            attempt);
+                                           donorId,
+                                           partitionList,
+                                           deletePartitionsList,
+                                           unbalancedStoreList,
+                                           attempt);
     }
 
     public List<Integer> getDeletePartitionsList() {
@@ -166,6 +166,4 @@ public class RebalancePartitionsInfo {
         writer.flush();
         return writer.toString();
     }
-
-
 }
