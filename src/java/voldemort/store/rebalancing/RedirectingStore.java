@@ -17,13 +17,18 @@
 package voldemort.store.rebalancing;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
 
 import voldemort.VoldemortException;
 import voldemort.client.protocol.RequestFormatType;
+import voldemort.client.rebalance.RebalancePartitionsInfo;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.server.RequestRoutingType;
@@ -86,9 +91,15 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
     }
 
     private boolean redirectingKey(ByteArray key) {
+        final String storeName = getName();
+        Predicate<RebalancePartitionsInfo> unbalancedStorePredicate = new Predicate<RebalancePartitionsInfo>() {
+            public boolean apply(RebalancePartitionsInfo rebalancePartitionsInfo) {
+                return rebalancePartitionsInfo.getUnbalancedStoreList().contains(storeName);
+            }
+        };
+
         return MetadataStore.VoldemortState.REBALANCING_MASTER_SERVER.equals(metadata.getServerState())
-               && !metadata.getRebalancingStealInfo().isEmpty()
-               && metadata.getRebalancingStealInfo().get(0).getUnbalancedStoreList().contains(getName())
+               && Iterables.any(metadata.getRebalancingStealInfo(), unbalancedStorePredicate)
                && checkKeyBelongsToStolenPartitions(key);
     }
 
@@ -149,7 +160,7 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
 
     protected boolean checkKeyBelongsToStolenPartitions(ByteArray key) {
         for(int partitionId: metadata.getRoutingStrategy(getName()).getPartitionList(key.get())) {
-            if(metadata.getRebalancingStealInfo().get(0).getPartitionList().contains(partitionId)) {
+            if(Iterables.any(metadata.getRebalancingStealInfo(), new PartitionIdPredicate(partitionId))) {
                 return true;
             }
         }
@@ -157,23 +168,33 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
     }
 
     /**
-     * performs back-door proxy get to {@link MetadataStore#getDonorNode()}
-     * 
-     * @param key
-     * @return
-     * @throws VoldemortException
+     * Performs a back-door proxy get to 
+     * {@link voldemort.client.rebalance.RebalancePartitionsInfo#getDonorId() getDonorId}
+     *
+     * @throws ProxyUnreachableException if donor node can't be reached
      */
     private List<Versioned<byte[]>> proxyGet(ByteArray key) throws VoldemortException {
-        Node donorNode = metadata.getCluster().getNodeById(metadata.getRebalancingStealInfo()
-                                                                   .get(0)
-                                                                   .getDonorId());
+        RebalancePartitionsInfo rebalancePartitionsInfo=null;
+        List<Integer> partitionIds = metadata.getRoutingStrategy(getName()).getPartitionList(key.get());
+        for(int partitionId: partitionIds) {
+            Iterator<RebalancePartitionsInfo> iterator = Iterables.filter(metadata.getRebalancingStealInfo(),
+                                                                          new PartitionIdPredicate(partitionId)).iterator();
+            if (iterator.hasNext()) {
+                rebalancePartitionsInfo = iterator.next();
+            }
+        }
+
+        if (rebalancePartitionsInfo == null) {
+            throw new IllegalStateException("no steal operation in progress for key " + key +
+                                            " partitions(" + Joiner.on(", ").join(partitionIds) + ")");
+        }
+
+        Node donorNode = metadata.getCluster().getNodeById(rebalancePartitionsInfo.getDonorId());
         checkNodeAvailable(donorNode);
         long start = System.currentTimeMillis();
         try {
             List<Versioned<byte[]>> values = getRedirectingSocketStore(getName(),
-                                                                       metadata.getRebalancingStealInfo()
-                                                                               .get(0)
-                                                                               .getDonorId()).get(key);
+                                                                       rebalancePartitionsInfo.getDonorId()).get(key);
             failureDetector.recordSuccess(donorNode, System.currentTimeMillis() - start);
             return values;
         } catch(UnreachableStoreException e) {
@@ -189,11 +210,10 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
     }
 
     /**
-     * performs back-door proxy get to {@link MetadataStore#getDonorNode()}
-     * 
-     * @param key
-     * @return
-     * @throws VoldemortException
+     * Performs a back-door proxy get to
+     * {@link voldemort.client.rebalance.RebalancePartitionsInfo#getDonorId() getDonorId}
+     *
+     * @throws ProxyUnreachableException if donor node can't be reached
      */
     private Map<ByteArray, List<Versioned<byte[]>>> proxyGetAll(Iterable<ByteArray> keys)
             throws VoldemortException {
@@ -290,6 +310,18 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
             throw new VoldemortException("Failed to get donorNode " + donorId
                                          + " from current cluster " + metadata.getCluster()
                                          + " at node " + metadata.getNodeId(), e);
+        }
+    }
+
+    private final static class PartitionIdPredicate implements Predicate<RebalancePartitionsInfo> {
+        private final int partitionId;
+        
+        public PartitionIdPredicate(int partitionId) {
+            this.partitionId = partitionId;
+        }
+
+        public boolean apply(RebalancePartitionsInfo rebalancePartitionsInfo) {
+            return rebalancePartitionsInfo.getPartitionList().contains(partitionId);
         }
     }
 }
