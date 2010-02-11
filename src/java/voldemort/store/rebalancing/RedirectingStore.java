@@ -64,6 +64,7 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
     private final MetadataStore metadata;
     private final StoreRepository storeRepository;
     private final SocketPool socketPool;
+    private final Predicate<RebalancePartitionsInfo> unbalancedStorePredicate;
     private FailureDetector failureDetector;
 
     public RedirectingStore(Store<ByteArray, byte[]> innerStore,
@@ -76,6 +77,12 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
         this.storeRepository = storeRepository;
         this.socketPool = socketPool;
         this.failureDetector = detector;
+
+        this.unbalancedStorePredicate = new Predicate<RebalancePartitionsInfo>() {
+            public boolean apply(RebalancePartitionsInfo rebalancePartitionsInfo) {
+                return rebalancePartitionsInfo.getUnbalancedStoreList().contains(getName());
+            }
+        };
     }
 
     @Override
@@ -91,13 +98,6 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
     }
 
     private boolean redirectingKey(ByteArray key) {
-        final String storeName = getName();
-        Predicate<RebalancePartitionsInfo> unbalancedStorePredicate = new Predicate<RebalancePartitionsInfo>() {
-            public boolean apply(RebalancePartitionsInfo rebalancePartitionsInfo) {
-                return rebalancePartitionsInfo.getUnbalancedStoreList().contains(storeName);
-            }
-        };
-
         return MetadataStore.VoldemortState.REBALANCING_MASTER_SERVER.equals(metadata.getServerState())
                && Iterables.any(metadata.getRebalancingStealInfo(), unbalancedStorePredicate)
                && checkKeyBelongsToStolenPartitions(key);
@@ -181,11 +181,12 @@ public class RedirectingStore extends DelegatingStore<ByteArray, byte[]> {
                                                                           new PartitionIdPredicate(partitionId)).iterator();
             if (iterator.hasNext()) {
                 rebalancePartitionsInfo = iterator.next();
+                break;
             }
         }
 
         if (rebalancePartitionsInfo == null) {
-            throw new IllegalStateException("no steal operation in progress for key " + key +
+            throw new IllegalStateException("No steal operation in progress for key " + key +
                                             " partitions(" + Joiner.on(", ").join(partitionIds) + ")");
         }
 
