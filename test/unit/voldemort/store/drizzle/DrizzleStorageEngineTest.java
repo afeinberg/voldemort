@@ -52,7 +52,7 @@ public class DrizzleStorageEngineTest extends AbstractStorageEngineTest {
 
     private DataSource getDataSource() {
         BasicDataSource ds = new BasicDataSource();
-        ds.setUrl("jdbc:drizzle://10.100.100.50:4427/test");
+        ds.setUrl("jdbc:drizzle://localhost:9306/test");
         ds.setDriverClassName("org.drizzle.jdbc.Driver");
         return ds;
     }
