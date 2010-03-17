@@ -263,10 +263,10 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
                                                      versionedSerializer);
                 if(!values.isEmpty())
                     result.put(key, values);
-
-                attemptClose(cursor);
-                cursor = null;
             }
+            attemptClose(cursor);
+            cursor = null;
+
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
@@ -335,6 +335,8 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
             attemptClose(cursor);
             cursor = null;
             attemptCommit(transaction);
+            // null out the transaction to avoid an abort if no exception is thrown
+            transaction = null;
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
@@ -368,6 +370,8 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
             attemptClose(cursor);
             cursor = null;
             attemptCommit(transaction);
+            // null out the transaction to avoid an abort if no exception is thrown
+            transaction = null;
 
             return deletedSomething;
         } catch(DatabaseException e) {
