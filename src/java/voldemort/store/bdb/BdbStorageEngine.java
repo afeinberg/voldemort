@@ -61,8 +61,8 @@ import com.sleepycat.je.Transaction;
 
 /**
  * A store that uses BDB for persistence
- * 
- * 
+ *
+ *
  */
 public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
 
@@ -178,6 +178,9 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
             } else {
                 attemptAbort(transaction);
             }
+        } catch (DatabaseException e) {
+            logger.error(e);
+            closeAndAbortSilently(null, transaction);
         } catch(Exception e) {
             logger.error(e);
         }
@@ -214,12 +217,17 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
         Cursor cursor = null;
         try {
             cursor = getBdbDatabase().openCursor(null, null);
-            return get(cursor, key, lockMode, serializer);
+            List<T> result = get(cursor, key, lockMode, serializer);
+
+            attemptClose(cursor);
+            cursor = null;
+
+            return result;
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
         } finally {
-            attemptClose(cursor);
+            closeAndAbortSilently(cursor, null);
         }
     }
 
@@ -255,12 +263,15 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
                                                      versionedSerializer);
                 if(!values.isEmpty())
                     result.put(key, values);
+
+                attemptClose(cursor);
+                cursor = null;
             }
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
         } finally {
-            attemptClose(cursor);
+            closeAndAbortSilently(cursor, null);
         }
         return result;
     }
@@ -287,7 +298,6 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
         StoreUtils.assertValidKey(key);
 
         DatabaseEntry keyEntry = new DatabaseEntry(key.get());
-        boolean succeeded = false;
         Transaction transaction = null;
         Cursor cursor = null;
         try {
@@ -321,17 +331,15 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
             OperationStatus status = cursor.put(keyEntry, valueEntry);
             if(status != OperationStatus.SUCCESS)
                 throw new PersistenceFailureException("Put operation failed with status: " + status);
-            succeeded = true;
 
+            attemptClose(cursor);
+            cursor = null;
+            attemptCommit(transaction);
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
         } finally {
-            attemptClose(cursor);
-            if(succeeded)
-                attemptCommit(transaction);
-            else
-                attemptAbort(transaction);
+            closeAndAbortSilently(cursor, transaction);
         }
     }
 
@@ -356,16 +364,17 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
                 }
                 status = cursor.getNextDup(keyEntry, valueEntry, LockMode.READ_UNCOMMITTED);
             }
+
+            attemptClose(cursor);
+            cursor = null;
+            attemptCommit(transaction);
+
             return deletedSomething;
         } catch(DatabaseException e) {
             logger.error(e);
             throw new PersistenceFailureException(e);
         } finally {
-            try {
-                attemptClose(cursor);
-            } finally {
-                attemptCommit(transaction);
-            }
+            closeAndAbortSilently(cursor, transaction);
         }
     }
 
@@ -410,7 +419,6 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
             transaction.commit();
         } catch(DatabaseException e) {
             logger.error("Transaction commit failed!", e);
-            attemptAbort(transaction);
             throw new PersistenceFailureException(e);
         }
     }
@@ -422,6 +430,20 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[]> {
         } catch(DatabaseException e) {
             logger.error("Error closing cursor.", e);
             throw new PersistenceFailureException(e.getMessage(), e);
+        }
+    }
+    
+    private static void closeAndAbortSilently(Cursor cursor, Transaction transaction) {
+        try {
+            try {
+                if(cursor != null)
+                    cursor.close();
+            } finally {
+                if(transaction != null)
+                    transaction.abort();
+            }
+        } catch(Exception e) {
+            logger.error("Error closing cursor or aborting transaction.", e);
         }
     }
 
