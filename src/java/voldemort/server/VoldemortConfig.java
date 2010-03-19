@@ -78,6 +78,8 @@ public class VoldemortConfig implements Serializable {
     private String mysqlHost;
     private int mysqlPort;
 
+    private int cacheHeapEvictingPercentage;
+
     private int readOnlyBackups;
     private String readOnlyStorageDir;
     private String readOnlySearchStrategy;
@@ -211,6 +213,9 @@ public class VoldemortConfig implements Serializable {
         this.mysqlHost = props.getString("mysql.host", "localhost");
         this.mysqlPort = props.getInt("mysql.port", 3306);
         this.mysqlDatabaseName = props.getString("mysql.database", "voldemort");
+
+        this.cacheHeapEvictingPercentage = props.getInt("cache.heap.eviction.percentage",
+                CacheStorageConfiguration.DEFAULT_EVICTING_HEAP_PERCENTAGE);
 
         this.maxThreads = props.getInt("max.threads", 100);
         this.coreThreads = props.getInt("core.threads", Math.max(1, maxThreads / 2));
@@ -706,6 +711,14 @@ public class VoldemortConfig implements Serializable {
 
     public void setMysqlPort(int mysqlPort) {
         this.mysqlPort = mysqlPort;
+    }
+    
+    public int getCacheHeapEvictingPercentage() {
+        return cacheHeapEvictingPercentage;
+    }
+
+    public void setCacheHeapEvictingPercentage(int cacheHeapEvictingPercentage) {
+        this.cacheHeapEvictingPercentage = cacheHeapEvictingPercentage;
     }
 
     public String getSlopStoreType() {
