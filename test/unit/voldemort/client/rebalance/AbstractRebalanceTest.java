@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +51,8 @@ import voldemort.routing.RoutingStrategy;
 import voldemort.store.InvalidMetadataException;
 import voldemort.store.Store;
 import voldemort.store.UnreachableStoreException;
-import voldemort.store.socket.SocketStore;
+import voldemort.store.socket.ClientRequestExecutorPool;
+import voldemort.store.socket.SocketStoreFactory;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
 import voldemort.utils.RebalanceUtils;
@@ -63,17 +65,19 @@ public abstract class AbstractRebalanceTest {
     protected static int NUM_KEYS = 100;
     protected static String testStoreName = "test";
     protected static String storeDefFile = "test/common/voldemort/config/single-store.xml";
-
+    protected SocketStoreFactory socketStoreFactory;
     HashMap<String, String> testEntries;
 
     @Before
     public void setUp() {
         testEntries = ServerTestUtils.createRandomKeyValueString(NUM_KEYS);
+        socketStoreFactory = new ClientRequestExecutorPool(2, 10000, 100000, 32 * 1024);
     }
 
     @After
     public void tearDown() {
         testEntries.clear();
+        socketStoreFactory.close();
     }
 
     protected abstract Cluster startServers(Cluster cluster,
@@ -87,12 +91,16 @@ public abstract class AbstractRebalanceTest {
         return template;
     }
 
-    protected SocketStore getSocketStore(String storeName, String host, int port) {
+    protected Store<ByteArray, byte[]> getSocketStore(String storeName, String host, int port) {
         return getSocketStore(storeName, host, port, false);
     }
 
-    protected SocketStore getSocketStore(String storeName, String host, int port, boolean isRouted) {
-        return ServerTestUtils.getSocketStore(storeName,
+    protected Store<ByteArray, byte[]> getSocketStore(String storeName,
+                                                      String host,
+                                                      int port,
+                                                      boolean isRouted) {
+        return ServerTestUtils.getSocketStore(socketStoreFactory,
+                                              storeName,
                                               host,
                                               port,
                                               RequestFormatType.PROTOCOL_BUFFERS,
@@ -588,6 +596,8 @@ public abstract class AbstractRebalanceTest {
                                                                                node.getSocketPort(),
                                                                                true);
 
+        final CountDownLatch latch = new CountDownLatch(1);
+
         // start get operation.
         executors.execute(new Runnable() {
 
@@ -622,6 +632,7 @@ public abstract class AbstractRebalanceTest {
                         }
                     }
 
+                    latch.countDown();
                 } catch(Exception e) {
                     exceptions.add(e);
                 }
@@ -655,8 +666,10 @@ public abstract class AbstractRebalanceTest {
                 } catch(Exception e) {
                     exceptions.add(e);
                 } finally {
-                    // stop servers
+                    // stop servers as soon as the client thread has exited its
+                    // loop.
                     try {
+                        latch.await(300, TimeUnit.SECONDS);
                         stopServer(serverList);
                     } catch(Exception e) {
                         throw new RuntimeException(e);
@@ -755,7 +768,9 @@ public abstract class AbstractRebalanceTest {
         int matchedEntries = 0;
         RoutingStrategy routing = new ConsistentRoutingStrategy(cluster.getNodes(), 1);
 
-        SocketStore store = getSocketStore(testStoreName, node.getHost(), node.getSocketPort());
+        Store<ByteArray, byte[]> store = getSocketStore(testStoreName,
+                                                        node.getHost(),
+                                                        node.getSocketPort());
 
         for(Entry<String, String> entry: testEntries.entrySet()) {
             ByteArray keyBytes = new ByteArray(ByteUtils.getBytes(entry.getKey(), "UTF-8"));

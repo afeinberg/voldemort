@@ -25,16 +25,22 @@ import voldemort.client.DefaultStoreClient;
 import voldemort.client.protocol.admin.AdminClient;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.server.RequestRoutingType;
 import voldemort.server.StoreRepository;
 import voldemort.server.VoldemortConfig;
 import voldemort.store.DelegatingStore;
 import voldemort.store.InvalidMetadataException;
 import voldemort.store.Store;
 import voldemort.store.metadata.MetadataStore;
+<<<<<<< HEAD
 import voldemort.store.routed.RoutableStore;
 import voldemort.store.socket.SocketDestination;
 import voldemort.store.socket.SocketPool;
 import voldemort.store.socket.SocketStore;
+=======
+import voldemort.store.routed.RoutedStore;
+import voldemort.store.socket.SocketStoreFactory;
+>>>>>>> First pass at bulk of code to implement non-blocking client connections to server.
 import voldemort.utils.ByteArray;
 import voldemort.utils.RebalanceUtils;
 import voldemort.versioning.ObsoleteVersionException;
@@ -54,20 +60,21 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
     private final MetadataStore metadata;
     private final StoreRepository storeRepository;
     private final VoldemortConfig voldemortConfig;
-    private final SocketPool socketPool;
-    private RoutableStore routableStore;
+    private final SocketStoreFactory storeFactory;
+    private RoutedStore routedStore;
+
 
     public RebootstrappingStore(MetadataStore metadataStore,
                                 StoreRepository storeRepository,
                                 VoldemortConfig voldemortConfig,
-                                SocketPool socketPool,
-                                RoutableStore routableStore) {
-        super(routableStore);
+                                SocketStoreFactory storeFactory,
+                                RoutedStore routedStore) {
+        super(routedStore);
         this.metadata = metadataStore;
         this.storeRepository = storeRepository;
         this.voldemortConfig = voldemortConfig;
-        this.socketPool = socketPool;
-        this.routableStore = routableStore;
+        this.storeFactory = storeFactory;
+        this.routedStore = routedStore;
     }
 
     private void reinit() {
@@ -82,7 +89,7 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
 
             checkAndAddNodeStore();
 
-            routableStore.updateRoutingStrategy(metadata.getRoutingStrategy(getName()));
+            routedStore.updateRoutingStrategy(metadata.getRoutingStrategy(getName()));
         } finally {
             adminClient.stop();
         }
@@ -96,11 +103,11 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
      */
     private void checkAndAddNodeStore() {
         for(Node node: metadata.getCluster().getNodes()) {
-            if(!routableStore.getInnerStores().containsKey(node.getId())) {
+            if(!routedStore.getInnerStores().containsKey(node.getId())) {
                 if(!storeRepository.hasNodeStore(getName(), node.getId())) {
                     storeRepository.addNodeStore(node.getId(), createNodeStore(node));
                 }
-                routableStore.getInnerStores().put(node.getId(),
+                routedStore.getInnerStores().put(node.getId(),
                                                    storeRepository.getNodeStore(getName(),
                                                                                 node.getId()));
             }
@@ -108,12 +115,11 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
     }
 
     private Store<ByteArray, byte[]> createNodeStore(Node node) {
-        return new SocketStore(getName(),
-                               new SocketDestination(node.getHost(),
-                                                     node.getSocketPort(),
-                                                     voldemortConfig.getRequestFormatType()),
-                               socketPool,
-                               false);
+        return storeFactory.create(getName(),
+                                   node.getHost(),
+                                   node.getSocketPort(),
+                                   voldemortConfig.getRequestFormatType(),
+                                   RequestRoutingType.NORMAL);
     }
 
     @Override
