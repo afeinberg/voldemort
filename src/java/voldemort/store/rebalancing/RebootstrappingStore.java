@@ -32,15 +32,9 @@ import voldemort.store.DelegatingStore;
 import voldemort.store.InvalidMetadataException;
 import voldemort.store.Store;
 import voldemort.store.metadata.MetadataStore;
-<<<<<<< HEAD
-import voldemort.store.routed.RoutableStore;
-import voldemort.store.socket.SocketDestination;
-import voldemort.store.socket.SocketPool;
-import voldemort.store.socket.SocketStore;
-=======
 import voldemort.store.routed.RoutedStore;
 import voldemort.store.socket.SocketStoreFactory;
->>>>>>> First pass at bulk of code to implement non-blocking client connections to server.
+
 import voldemort.utils.ByteArray;
 import voldemort.utils.RebalanceUtils;
 import voldemort.versioning.ObsoleteVersionException;

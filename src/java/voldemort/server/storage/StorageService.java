@@ -63,6 +63,8 @@ import voldemort.store.StoreDefinition;
 import voldemort.store.invalidmetadata.InvalidMetadataCheckingStore;
 import voldemort.store.logging.LoggingStore;
 import voldemort.store.metadata.MetadataStore;
+import voldemort.store.nonblockingstore.NonblockingStore;
+import voldemort.store.nonblockingstore.ThreadPoolBasedNonblockingStoreImpl;
 import voldemort.store.readonly.ReadOnlyStorageEngine;
 import voldemort.store.rebalancing.RebootstrappingStore;
 import voldemort.store.rebalancing.RedirectingStore;
@@ -70,6 +72,7 @@ import voldemort.store.routed.NewRoutedStore;
 import voldemort.store.routed.RoutableStore;
 import voldemort.store.routed.RoutedStore;
 import voldemort.store.serialized.SerializingStorageEngine;
+import voldemort.store.socket.SocketStore;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 import voldemort.store.stats.DataSetStats;
@@ -285,11 +288,22 @@ public class StorageService extends AbstractService {
      */
     public void registerNodeStores(StoreDefinition def, Cluster cluster, int localNode) {
         Map<Integer, Store<ByteArray, byte[]>> nodeStores = new HashMap<Integer, Store<ByteArray, byte[]>>(cluster.getNumberOfNodes());
+        Map<Integer, NonblockingStore> nonblockingStores = new HashMap<Integer, NonblockingStore>(cluster.getNumberOfNodes());
 
         for(Node node: cluster.getNodes()) {
             Store<ByteArray, byte[]> store = getNodeStore(def.getName(), node, localNode);
+            NonblockingStore nonblockingStore = null;
+
+            if(store instanceof NonblockingStore)
+                nonblockingStore = (NonblockingStore) store;
+            else
+                nonblockingStore = new ThreadPoolBasedNonblockingStoreImpl(this.clientThreadPool,
+                                                                           store);
+
             this.storeRepository.addNodeStore(node.getId(), store);
             nodeStores.put(node.getId(), store);
+
+            nonblockingStores.put(node.getId(), nonblockingStore);
         }
 
         Store<ByteArray, byte[]> routedStore = new RoutedStore(def.getName(),
