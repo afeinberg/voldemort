@@ -32,6 +32,7 @@ import voldemort.store.DelegatingStore;
 import voldemort.store.InvalidMetadataException;
 import voldemort.store.Store;
 import voldemort.store.metadata.MetadataStore;
+import voldemort.store.routed.NewRoutedStore;
 import voldemort.store.routed.RoutedStore;
 import voldemort.store.socket.SocketStoreFactory;
 
@@ -61,14 +62,15 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
     public RebootstrappingStore(MetadataStore metadataStore,
                                 StoreRepository storeRepository,
                                 VoldemortConfig voldemortConfig,
-                                SocketStoreFactory storeFactory,
-                                RoutedStore routedStore) {
+                                RoutedStore routedStore,
+                                SocketStoreFactory storeFactory) {
         super(routedStore);
-        this.metadata = metadataStore;
         this.storeRepository = storeRepository;
         this.voldemortConfig = voldemortConfig;
+        this.routedStore = routedStore;
         this.storeFactory = storeFactory;
         this.routedStore = routedStore;
+        this.metadata = metadataStore;
     }
 
     private void reinit() {
@@ -102,8 +104,8 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[]> {
                     storeRepository.addNodeStore(node.getId(), createNodeStore(node));
                 }
                 routedStore.getInnerStores().put(node.getId(),
-                                                   storeRepository.getNodeStore(getName(),
-                                                                                node.getId()));
+                                                 storeRepository.getNodeStore(getName(),
+                                                                              node.getId()));
             }
         }
     }
