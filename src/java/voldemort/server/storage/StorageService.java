@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.MBeanOperationInfo;
 import javax.management.MBeanServer;
@@ -63,19 +64,12 @@ import voldemort.store.StoreDefinition;
 import voldemort.store.invalidmetadata.InvalidMetadataCheckingStore;
 import voldemort.store.logging.LoggingStore;
 import voldemort.store.metadata.MetadataStore;
-import voldemort.store.nonblockingstore.NonblockingStore;
-import voldemort.store.nonblockingstore.ThreadPoolBasedNonblockingStoreImpl;
 import voldemort.store.readonly.ReadOnlyStorageEngine;
 import voldemort.store.rebalancing.RebootstrappingStore;
 import voldemort.store.rebalancing.RedirectingStore;
-<<<<<<< HEAD
-import voldemort.store.routed.NewRoutedStore;
-import voldemort.store.routed.RoutableStore;
-=======
->>>>>>> Removed the RoutableStore and NewRoutedStore classes.
 import voldemort.store.routed.RoutedStore;
+import voldemort.store.routed.RoutedStoreFactory;
 import voldemort.store.serialized.SerializingStorageEngine;
-import voldemort.store.socket.SocketStore;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 import voldemort.store.stats.DataSetStats;
@@ -118,6 +112,7 @@ public class StorageService extends AbstractService {
     private final ClientThreadPool clientThreadPool;
     private final FailureDetector failureDetector;
     private final StoreStats storeStats;
+    private final RoutedStoreFactory routedStoreFactory;
 
     public StorageService(StoreRepository storeRepository,
                           MetadataStore metadata,
@@ -138,7 +133,6 @@ public class StorageService extends AbstractService {
                                                           config.getSocketTimeoutMs(),
                                                           config.getSocketBufferSize(),
                                                           config.getSocketKeepAlive());
-        
 
         FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig(voldemortConfig).setNodes(metadata.getCluster()
                                                                                                                   .getNodes())
@@ -147,6 +141,9 @@ public class StorageService extends AbstractService {
                                                                                                                                           config));
         this.failureDetector = create(failureDetectorConfig, config.isJmxEnabled());
         this.storeStats = new StoreStats();
+        this.routedStoreFactory = new RoutedStoreFactory(voldemortConfig.isPipelineRoutedStoreEnabled(),
+                                                         this.clientThreadPool,
+                                                         voldemortConfig.getRoutingTimeoutMs());
     }
 
     private void initStorageConfig(String configClassName) {
@@ -291,33 +288,18 @@ public class StorageService extends AbstractService {
      */
     public void registerNodeStores(StoreDefinition def, Cluster cluster, int localNode) {
         Map<Integer, Store<ByteArray, byte[]>> nodeStores = new HashMap<Integer, Store<ByteArray, byte[]>>(cluster.getNumberOfNodes());
-        Map<Integer, NonblockingStore> nonblockingStores = new HashMap<Integer, NonblockingStore>(cluster.getNumberOfNodes());
 
         for(Node node: cluster.getNodes()) {
             Store<ByteArray, byte[]> store = getNodeStore(def.getName(), node, localNode);
-            NonblockingStore nonblockingStore = null;
-
-            if(store instanceof NonblockingStore)
-                nonblockingStore = (NonblockingStore) store;
-            else
-                nonblockingStore = new ThreadPoolBasedNonblockingStoreImpl(this.clientThreadPool,
-                                                                           store);
-
             this.storeRepository.addNodeStore(node.getId(), store);
             nodeStores.put(node.getId(), store);
-
-            nonblockingStores.put(node.getId(), nonblockingStore);
         }
 
-        Store<ByteArray, byte[]> store = new RoutedStore(def.getName(),
-                                                         nodeStores,
-                                                         nonblockingStores,
-                                                         metadata.getCluster(),
-                                                         def,
-                                                         true,
-                                                         this.clientThreadPool,
-                                                         voldemortConfig.getRoutingTimeoutMs(),
-                                                         failureDetector);
+        Store<ByteArray, byte[]> store = routedStoreFactory.create(cluster,
+                                                                   def,
+                                                                   nodeStores,
+                                                                   true,
+                                                                   failureDetector);
 
         store = new RebootstrappingStore(metadata,
                                          storeRepository,
@@ -452,7 +434,16 @@ public class StorageService extends AbstractService {
             }
         }
 
-        this.clientThreadPool.shutdownNow();
+        this.clientThreadPool.shutdown();
+
+        try {
+            if(!this.clientThreadPool.awaitTermination(10, TimeUnit.SECONDS))
+                this.clientThreadPool.shutdownNow();
+        } catch(InterruptedException e) {
+            // okay, fine, playing nice didn't work
+            this.clientThreadPool.shutdownNow();
+        }
+
         logger.info("Closed client threadpool.");
 
         if(this.failureDetector != null) {
