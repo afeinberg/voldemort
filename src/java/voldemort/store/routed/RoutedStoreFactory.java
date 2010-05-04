@@ -50,6 +50,7 @@ public class RoutedStoreFactory {
                               Map<Integer, Store<ByteArray, byte[]>> nodeStores,
                               Map<Integer, NonblockingStore> nonblockingStores,
                               boolean repairReads,
+                              boolean enableHintedHandoff,
                               FailureDetector failureDetector) {
         if(isPipelineRoutedStoreEnabled) {
             return new PipelineRoutedStore(storeDefinition.getName(),
@@ -58,9 +59,13 @@ public class RoutedStoreFactory {
                                            cluster,
                                            storeDefinition,
                                            repairReads,
+                                           enableHintedHandoff,
                                            routingTimeoutMs,
                                            failureDetector);
         } else {
+            if (enableHintedHandoff)
+                throw new IllegalArgumentException("hinted handoff requires pipelined routed store");
+            
             return new ThreadPoolRoutedStore(storeDefinition.getName(),
                                              nodeStores,
                                              cluster,
@@ -73,10 +78,12 @@ public class RoutedStoreFactory {
         }
     }
 
+
     public RoutedStore create(Cluster cluster,
                               StoreDefinition storeDefinition,
                               Map<Integer, Store<ByteArray, byte[]>> nodeStores,
                               boolean repairReads,
+                              boolean enableHintedHandoff,
                               FailureDetector failureDetector) {
         Map<Integer, NonblockingStore> nonblockingStores = Maps.newHashMap();
 
@@ -88,6 +95,20 @@ public class RoutedStoreFactory {
                       nodeStores,
                       nonblockingStores,
                       repairReads,
+                      enableHintedHandoff,
+                      failureDetector);
+    }
+
+    public RoutedStore create(Cluster cluster,
+                              StoreDefinition storeDefinition,
+                              Map<Integer, Store<ByteArray, byte[]>> nodeStores,
+                              boolean repairReads,
+                              FailureDetector failureDetector) {
+        return create(cluster,
+                      storeDefinition,
+                      nodeStores,
+                      repairReads,
+                      false,
                       failureDetector);
     }
 

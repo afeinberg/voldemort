@@ -20,6 +20,8 @@ import voldemort.cluster.Node;
 import voldemort.store.routed.action.PerformSerialPutRequests;
 import voldemort.versioning.Versioned;
 
+import java.util.List;
+
 /**
  * This is used only by the "put" operation as it includes data specific only to
  * that operation.
@@ -30,6 +32,8 @@ public class PutPipelineData extends BasicPipelineData<Void> {
     private Node master;
 
     private Versioned<byte[]> versionedCopy;
+
+    private boolean enableHintedHandoff;
 
     /**
      * Returns the previously determined "master" node. This is the first node
@@ -76,4 +80,11 @@ public class PutPipelineData extends BasicPipelineData<Void> {
         this.versionedCopy = versionedCopy;
     }
 
+    public boolean isHintedHandoffEnabled() {
+        return enableHintedHandoff;
+    }
+
+    public void setEnableHintedHandoff(boolean enableHintedHandoff) {
+        this.enableHintedHandoff = enableHintedHandoff;
+    }
 }

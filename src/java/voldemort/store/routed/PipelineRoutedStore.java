@@ -59,7 +59,7 @@ import voldemort.versioning.Versioned;
 public class PipelineRoutedStore extends RoutedStore {
 
     private final Map<Integer, NonblockingStore> nonblockingStores;
-
+    private final boolean enableHintedHandoff;
     /**
      * Create a PipelineRoutedStore
      * 
@@ -78,6 +78,7 @@ public class PipelineRoutedStore extends RoutedStore {
                                Cluster cluster,
                                StoreDefinition storeDef,
                                boolean repairReads,
+                               boolean enableHintedHandoff, 
                                long timeoutMs,
                                FailureDetector failureDetector) {
         super(name,
@@ -90,6 +91,7 @@ public class PipelineRoutedStore extends RoutedStore {
               SystemTime.INSTANCE);
 
         this.nonblockingStores = new ConcurrentHashMap<Integer, NonblockingStore>(nonblockingStores);
+        this.enableHintedHandoff = enableHintedHandoff;
     }
 
     public List<Versioned<byte[]>> get(final ByteArray key) {
