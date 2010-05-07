@@ -208,7 +208,9 @@ public class RemoteTest {
                 .withRequiredArg()
                 .ofType(String.class);
         parser.accepts("node", "go to this node id").withRequiredArg().ofType(Integer.class);
-        parser.accepts("interval", "print requests on this interval, -1 to disable")
+        parser.accepts("pipeline-routed-store", "Use the Pipeline RoutedStore");
+        parser.accepts("node", "go to this node id").withRequiredArg().ofType(Integer.class);
+        parser.accepts("interval", "print requests on this interval, -1 disables")
               .withRequiredArg()
               .ofType(Integer.class);
         parser.accepts("handshake", "perform a handshake");
@@ -307,7 +309,9 @@ public class RemoteTest {
                                                       .setConnectionTimeout(60, TimeUnit.SECONDS)
                                                       .setSocketTimeout(60, TimeUnit.SECONDS)
                                                       .setFailureDetectorRequestLengthThreshold(TimeUnit.SECONDS.toMillis(60))
-                                                      .setSocketBufferSize(4 * 1024);
+                                                      .setSocketBufferSize(4 * 1024)
+                                                      .setEnablePipelineRoutedStore(options.has("pipeline-routed-store"));
+
         SocketStoreClientFactory factory = new SocketStoreClientFactory(clientConfig);
         final StoreClient<Object, Object> store = factory.getStoreClient(storeName);
         StoreDefinition storeDef = getStoreDefinition(factory, storeName);
