@@ -165,6 +165,7 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
                                                                    clientMapping,
                                                                    nonblockingStores,
                                                                    repairReads,
+                                                                   false,
                                                                    getFailureDetector());
 
         if(isJmxEnabled) {

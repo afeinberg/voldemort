@@ -306,6 +306,7 @@ public class StorageService extends AbstractService {
                                                                    nodeStores,
                                                                    nonblockingStores,
                                                                    true,
+                                                                   false,
                                                                    failureDetector);
 
         store = new RebootstrappingStore(metadata,
