@@ -9,7 +9,8 @@ message Slop {
   optional string operation = 2;
   optional bytes key = 3;
   optional bytes value = 4;
-  optional int64 arrived = 5;
+  optional int32 node_id = 5;
+  optional int64 arrived = 6;
 }
 
   

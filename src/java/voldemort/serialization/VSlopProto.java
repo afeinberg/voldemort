@@ -59,8 +59,15 @@ public final class VSlopProto {
     public boolean hasValue() { return hasValue; }
     public com.google.protobuf.ByteString getValue() { return value_; }
     
-    // optional int64 arrived = 5;
-    public static final int ARRIVED_FIELD_NUMBER = 5;
+    // optional int32 node_id = 5;
+    public static final int NODE_ID_FIELD_NUMBER = 5;
+    private boolean hasNodeId;
+    private int nodeId_ = 0;
+    public boolean hasNodeId() { return hasNodeId; }
+    public int getNodeId() { return nodeId_; }
+    
+    // optional int64 arrived = 6;
+    public static final int ARRIVED_FIELD_NUMBER = 6;
     private boolean hasArrived;
     private long arrived_ = 0L;
     public boolean hasArrived() { return hasArrived; }
@@ -84,8 +91,11 @@ public final class VSlopProto {
       if (hasValue()) {
         output.writeBytes(4, getValue());
       }
+      if (hasNodeId()) {
+        output.writeInt32(5, getNodeId());
+      }
       if (hasArrived()) {
-        output.writeInt64(5, getArrived());
+        output.writeInt64(6, getArrived());
       }
       getUnknownFields().writeTo(output);
     }
@@ -112,9 +122,13 @@ public final class VSlopProto {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(4, getValue());
       }
+      if (hasNodeId()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(5, getNodeId());
+      }
       if (hasArrived()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(5, getArrived());
+          .computeInt64Size(6, getArrived());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -277,6 +291,9 @@ public final class VSlopProto {
         if (other.hasValue()) {
           setValue(other.getValue());
         }
+        if (other.hasNodeId()) {
+          setNodeId(other.getNodeId());
+        }
         if (other.hasArrived()) {
           setArrived(other.getArrived());
         }
@@ -322,6 +339,10 @@ public final class VSlopProto {
               break;
             }
             case 40: {
+              setNodeId(input.readInt32());
+              break;
+            }
+            case 48: {
               setArrived(input.readInt64());
               break;
             }
@@ -414,7 +435,25 @@ public final class VSlopProto {
         return this;
       }
       
-      // optional int64 arrived = 5;
+      // optional int32 node_id = 5;
+      public boolean hasNodeId() {
+        return result.hasNodeId();
+      }
+      public int getNodeId() {
+        return result.getNodeId();
+      }
+      public Builder setNodeId(int value) {
+        result.hasNodeId = true;
+        result.nodeId_ = value;
+        return this;
+      }
+      public Builder clearNodeId() {
+        result.hasNodeId = false;
+        result.nodeId_ = 0;
+        return this;
+      }
+      
+      // optional int64 arrived = 6;
       public boolean hasArrived() {
         return result.hasArrived();
       }
@@ -456,10 +495,11 @@ public final class VSlopProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\nslop.proto\022\tvoldemort\"U\n\004Slop\022\r\n\005store" +
+      "\n\nslop.proto\022\tvoldemort\"f\n\004Slop\022\r\n\005store" +
       "\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t\022\013\n\003key\030\003 \001(\014\022\r" +
-      "\n\005value\030\004 \001(\014\022\017\n\007arrived\030\005 \001(\003B\'\n\027voldem" +
-      "ort.serializationB\nVSlopProtoH\001"
+      "\n\005value\030\004 \001(\014\022\017\n\007node_id\030\005 \001(\005\022\017\n\007arrive" +
+      "d\030\006 \001(\003B\'\n\027voldemort.serializationB\nVSlo" +
+      "pProtoH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -471,7 +511,7 @@ public final class VSlopProto {
           internal_static_voldemort_Slop_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_voldemort_Slop_descriptor,
-              new java.lang.String[] { "Store", "Operation", "Key", "Value", "Arrived", },
+              new java.lang.String[] { "Store", "Operation", "Key", "Value", "NodeId", "Arrived", },
               voldemort.serialization.VSlopProto.Slop.class,
               voldemort.serialization.VSlopProto.Slop.Builder.class);
           return null;
