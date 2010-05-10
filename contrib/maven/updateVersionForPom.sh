@@ -9,4 +9,6 @@ NEW_VERSION=`sed '/^\#/d' ../../build.properties | grep 'curr.release'  | tail -
 echo "Updating $OLD_VERSION to $NEW_VERSION inside pom.xml" 
 
 echo "mavenVoldemortVersion=$NEW_VERSION" > mavenVoldemort.properties
-perl -pi -e s/$OLD_VERSION/$NEW_VERSION/g pom.xml
+perl -pi -e "s:<voldemort\.version>$OLD_VERSION</voldemort\.version>:<voldemort\.version>$NEW_VERSION</voldemort\.version>:g" pom.xml
+
+mvn versions:set -D newVersion=${NEW_VERSION}

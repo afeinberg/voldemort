@@ -16,7 +16,6 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.0.2</version>
                 <configuration>
                     <source>1.5</source>
                     <target>1.5</target>
@@ -122,16 +121,16 @@
         <dependency>
             <groupId>voldermort</groupId>
             <artifactId>voldermort</artifactId>
-            <version>0.80.1</version>
+            <version>${voldemort.version}</version>
             <scope>system</scope>
-            <systemPath>${basedir}/../../dist/voldemort-0.80.1.jar</systemPath>
+            <systemPath>${basedir}/../../dist/voldemort-${voldemort.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>voldermort</groupId>
             <artifactId>voldermort-test</artifactId>
-            <version>0.80.1</version>
+            <version>${voldemort.version}</version>
             <scope>system</scope>
-            <systemPath>${basedir}/../../dist/voldemort-test-0.80.1.jar</systemPath>
+            <systemPath>${basedir}/../../dist/voldemort-test-${voldemort.version}.jar</systemPath>
         </dependency>
 
 
@@ -143,6 +142,9 @@
 
         
     </dependencies>
+    <properties>
+        <voldemort.version>0.80.1</voldemort.version>
+    </properties>
 
 
 </project>
