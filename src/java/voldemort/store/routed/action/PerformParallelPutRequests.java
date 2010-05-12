@@ -135,10 +135,15 @@ public class PerformParallelPutRequests extends
                                                                                          + pipelineData.getSuccesses()
                                                                                          + " succeeded",
                                                                                  pipelineData.getFailures()));
-
-            pipeline.addEvent(Event.ERROR);
+            if (pipelineData.isHintedHandoffEnabled() && !pipelineData.getSlopQueue().isEmpty())
+                pipeline.addEvent(Event.SLOPPY_QUORUM);
+            else
+                pipeline.addEvent(Event.ERROR);
         } else {
-            pipeline.addEvent(completeEvent);
+            if (pipelineData.isHintedHandoffEnabled() && !pipelineData.getSlopQueue().isEmpty())
+                pipeline.addEvent(Event.SLOPPY_QUORUM);
+            else
+                pipeline.addEvent(completeEvent);
         }
     }
 }

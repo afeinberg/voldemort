@@ -25,6 +25,8 @@ import voldemort.routing.RoutingStrategy;
 import voldemort.store.InsufficientOperationalNodesException;
 import voldemort.store.routed.PipelineData;
 import voldemort.store.routed.Pipeline.Event;
+import voldemort.store.routed.PutPipelineData;
+import voldemort.store.slop.Slop;
 import voldemort.utils.ByteArray;
 
 public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>> extends
@@ -53,6 +55,14 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
         for(Node node: routingStrategy.routeRequest(key.get())) {
             if(failureDetector.isAvailable(node))
                 nodes.add(node);
+            else {
+                if (pipelineData instanceof PutPipelineData) {
+                    PutPipelineData putPutPipelineData = (PutPipelineData) pipelineData;
+                    
+                    if (putPutPipelineData.isHintedHandoffEnabled())
+                        putPutPipelineData.addSlop(node.getId());
+                }
+            }
         }
 
         if(nodes.size() < required)
