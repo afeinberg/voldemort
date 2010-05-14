@@ -49,6 +49,7 @@ import voldemort.versioning.Versioned;
 public class PipelineRoutedStore extends RoutedStore {
 
     private final Map<Integer, NonblockingStore> nonblockingStores;
+    
     private final boolean enableHintedHandoff;
     /**
      * Create a PipelineRoutedStore
@@ -357,15 +358,20 @@ public class PipelineRoutedStore extends RoutedStore {
                                                                timeoutMs,
                                                                nonblockingStores));
 
+        if (enableHintedHandoff)
+            pipeline.addEventAction(Event.SLOPPY_QUORUM, new PerformHintedHandoff(pipelineData,
+                                                                                  Event.RESPONSES_RECEIVED,
+                                                                                  key,
+                                                                                  versioned,
+                                                                                  storeDef,
+                                                                                  failureDetector));
 
         pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
                                                                              Event.COMPLETED,
                                                                              versioned,
                                                                              time));
 
-        pipeline.addEventAction(Event.SLOPPY_QUORUM, new PerformHintedHandoff(pipelineData,
-                                                                              Event.RESPONSES_RECEIVED,
-                                                                              versioned));
+
 
         pipeline.addEvent(Event.STARTED);
         pipeline.execute();

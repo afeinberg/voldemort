@@ -25,6 +25,7 @@ import voldemort.routing.RoutingStrategy;
 import voldemort.store.routed.BasicPipelineData;
 import voldemort.store.routed.Pipeline;
 import voldemort.store.routed.Pipeline.Event;
+import voldemort.store.routed.PutPipelineData;
 import voldemort.utils.ByteArray;
 
 public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
@@ -55,6 +56,10 @@ public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
 
         if(logger.isDebugEnabled())
             logger.debug("Adding " + nodes.size() + " node(s) to preference list");
+
+        if (pipelineData instanceof PutPipelineData) {
+            
+        }
 
         pipelineData.setNodes(nodes);
         pipeline.addEvent(completeEvent);

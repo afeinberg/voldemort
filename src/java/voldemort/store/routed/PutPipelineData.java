@@ -16,10 +16,16 @@
 
 package voldemort.store.routed;
 
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.store.Store;
 import voldemort.store.routed.action.PerformSerialPutRequests;
+import voldemort.store.slop.Slop;
+import voldemort.utils.ByteArray;
 import voldemort.versioning.Versioned;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -30,13 +36,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class PutPipelineData extends BasicPipelineData<Void> {
 
+    private Cluster cluster;
+
     private Node master;
 
     private Versioned<byte[]> versionedCopy;
+
     private Queue<Integer> slopQueue = new ConcurrentLinkedQueue<Integer>();
 
-    private boolean enableHintedHandoff;
+    private Map<Node, Store<ByteArray, Slop>> slopStores;
 
+    private boolean enableHintedHandoff;
 
 
     /**
@@ -98,5 +108,21 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     public Queue<Integer> getSlopQueue() {
         return slopQueue;
+    }
+
+    public void setSlopStores(Map<Node, Store<ByteArray, Slop>> slopStores) {
+        this.slopStores = slopStores;
+    }
+
+    public Map<Node, Store<ByteArray, Slop>> getSlopStores() {
+        return slopStores;
+    }
+
+    public void setCluster(Cluster cluster) {
+        this.cluster = cluster;
+    }
+
+    public Cluster getCluster() {
+        return cluster;
     }
 }
