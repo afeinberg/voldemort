@@ -42,6 +42,9 @@ public class PerformHintedHandoff extends AbstractAction<ByteArray, Void, PutPip
         Queue<Integer> slopQueue = pipelineData.getSlopQueue();
         Map<Node, Store<ByteArray, Slop>> slopStores = pipelineData.getSlopStores();
 
+        assert slopQueue != null;
+        assert slopStores != null;
+        
         while (!slopQueue.isEmpty()) {
             int nodeId = slopQueue.remove();
             
@@ -81,6 +84,8 @@ public class PerformHintedHandoff extends AbstractAction<ByteArray, Void, PutPip
 
             if (slopDestination != null)
                 slopStores.remove(slopDestination);
+            else
+                logger.error("Couldn't find a slop store for " + nodeId);
         }
 
         if (pipelineData.getFatalError() != null)
