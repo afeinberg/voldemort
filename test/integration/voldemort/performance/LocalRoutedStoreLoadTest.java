@@ -61,7 +61,7 @@ public class LocalRoutedStoreLoadTest extends AbstractLoadTestHarness {
     public StoreClient<String, String> getStore(Props propsA, Props propsB) throws Exception {
         Cluster cluster = new ClusterMapper().readCluster(new FileReader(propsA.getString("metadata.directory")
                                                                          + File.separator
-                                                                         + "/cluster.xml"));                                 R
+                                                                         + "/cluster.xml"));
         Map<Integer, Store<ByteArray, byte[]>> clientMapping = Maps.newHashMap();
         ExecutorService threadPool = Executors.newFixedThreadPool(10);
         VoldemortConfig voldemortConfig = new VoldemortConfig(propsA);
