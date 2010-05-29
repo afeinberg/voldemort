@@ -1,6 +1,8 @@
 package voldemort.store.routed;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,18 +11,22 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import voldemort.MutableStoreVerifier;
 import voldemort.ServerTestUtils;
+import voldemort.TestUtils;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.BannagePeriodFailureDetector;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.cluster.failuredetector.FailureDetectorConfig;
 import voldemort.cluster.failuredetector.FailureDetectorUtils;
+import voldemort.routing.RoutingStrategy;
+import voldemort.routing.RoutingStrategyFactory;
 import voldemort.routing.RoutingStrategyType;
+import voldemort.store.ForceFailStore;
 import voldemort.store.Store;
 import voldemort.store.StoreDefinition;
 import voldemort.store.memory.InMemoryStorageEngine;
-import voldemort.store.stats.StatTrackingStore;
 import voldemort.utils.ByteArray;
+import voldemort.versioning.Versioned;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +42,10 @@ public class HintedHandoffTest {
 
     private final static String STORE_NAME = "test";
     private final static int NUM_THREADS = 4;
+    private final static int NUM_NODES = 9;
+    private final static int KEY_LENGTH = 512;
+    private final static int VALUE_LENGTH = 1024;
+
 
     private final Class<FailureDetector> failureDetectorClass;
     private Cluster cluster;
@@ -68,9 +78,7 @@ public class HintedHandoffTest {
         subStores = Maps.newHashMap();
 
         for (Node node: cluster.getNodes()) {
-            // TODO: extend ForceFailStore to fail on demand
-            
-            Store<ByteArray, byte[]> subStore = new InMemoryStorageEngine<ByteArray, byte[]>(STORE_NAME);
+            Store<ByteArray, byte[]> subStore = new ForceFailStore<ByteArray, byte[]>(new InMemoryStorageEngine<ByteArray, byte[]>(STORE_NAME));
             subStores.put(node.getId(), subStore);
         }
 
@@ -92,16 +100,38 @@ public class HintedHandoffTest {
 
     @Test
     public void testHintedHandOff() throws Exception {
-        // TODO: finish this as a failing test
-
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
                                                             true,
                                                             failureDetector);
+
+        Multimap<Integer, ByteArray> keysToNodes = HashMultimap.create();
+        Map<ByteArray, byte[]> keyValues = Maps.newHashMap();
+
+        RoutingStrategyFactory routingStrategyFactory = new RoutingStrategyFactory();
+        RoutingStrategy routingStrategy = routingStrategyFactory.updateRoutingStrategy(storeDef,
+                                                                                       cluster);
+
+        while (keysToNodes.keySet().size() < NUM_NODES) {
+            ByteArray randomKey = new ByteArray(TestUtils.randomBytes(KEY_LENGTH));
+            byte[] randomValue = TestUtils.randomBytes(VALUE_LENGTH);
+
+            int nodeId = routingStrategy.routeRequest(randomKey.get()).get(0).getId();
+            keysToNodes.put(nodeId, randomKey);
+            keyValues.put(randomKey, randomValue);
+        }
+
+        for (ByteArray key: keysToNodes.values()) {
+            Versioned<byte[]> versioned = new Versioned<byte[]>(keyValues.get(key));
+            routedStore.put(key, versioned);
+        }
+
     }
 
-
+    public ForceFailStore<ByteArray, byte[]> getForceFailStore(int nodeId) {
+        return (ForceFailStore <ByteArray, byte[]>) subStores.get(nodeId);
+    }
 
     private void setFailureDetector(Map<Integer, Store<ByteArray, byte[]>> subStores)
             throws Exception {
