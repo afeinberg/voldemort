@@ -7,7 +7,7 @@
     <http-port>8080</http-port>
     <socket-port>6666</socket-port>
     <admin-port>7666</admin-port>
-    <partitions>16, 3, 21</partitions>
+    <partitions>3, 21</partitions>
   </server>
   <server>
     <id>1</id>
