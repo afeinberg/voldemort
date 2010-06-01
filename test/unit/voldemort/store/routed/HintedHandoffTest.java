@@ -111,6 +111,7 @@ public class HintedHandoffTest {
                                                             storeDef,
                                                             subStores,
                                                             true,
+                                                            true,
                                                             failureDetector);
 
         Multimap<Integer, ByteArray> keysToNodes = HashMultimap.create();

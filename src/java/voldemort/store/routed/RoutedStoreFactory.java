@@ -51,6 +51,22 @@ public class RoutedStoreFactory {
                               Map<Integer, NonblockingStore> nonblockingStores,
                               boolean repairReads,
                               FailureDetector failureDetector) {
+        return create(cluster,
+                      storeDefinition,
+                      nodeStores,
+                      nonblockingStores,
+                      repairReads,
+                      false,
+                      failureDetector);
+    }
+
+    public RoutedStore create(Cluster cluster,
+                              StoreDefinition storeDefinition,
+                              Map<Integer, Store<ByteArray, byte[]>> nodeStores,
+                              Map<Integer, NonblockingStore> nonblockingStores,
+                              boolean repairReads,
+                              boolean enableHintedHandoff,
+                              FailureDetector failureDetector) {
         if(isPipelineRoutedStoreEnabled) {
             return new PipelineRoutedStore(storeDefinition.getName(),
                                            nodeStores,
@@ -58,6 +74,7 @@ public class RoutedStoreFactory {
                                            cluster,
                                            storeDefinition,
                                            repairReads,
+                                           enableHintedHandoff,
                                            routingTimeoutMs,
                                            failureDetector);
         } else {
@@ -78,6 +95,20 @@ public class RoutedStoreFactory {
                               Map<Integer, Store<ByteArray, byte[]>> nodeStores,
                               boolean repairReads,
                               FailureDetector failureDetector) {
+        return create(cluster,
+                      storeDefinition,
+                      nodeStores,
+                      repairReads,
+                      false,
+                      failureDetector);
+    }
+
+    public RoutedStore create(Cluster cluster,
+                              StoreDefinition storeDefinition,
+                              Map<Integer, Store<ByteArray, byte[]>> nodeStores,
+                              boolean repairReads,
+                              boolean enableHintedHandoff,
+                              FailureDetector failureDetector) {
         Map<Integer, NonblockingStore> nonblockingStores = Maps.newHashMap();
 
         for(Map.Entry<Integer, Store<ByteArray, byte[]>> entry: nodeStores.entrySet())
@@ -88,6 +119,7 @@ public class RoutedStoreFactory {
                       nodeStores,
                       nonblockingStores,
                       repairReads,
+                      enableHintedHandoff,
                       failureDetector);
     }
 
