@@ -36,6 +36,8 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
 
     protected final RoutingStrategy routingStrategy;
 
+    private List<Node> availableNodes;
+
     protected AbstractConfigureNodes(PD pipelineData,
                                      Event completeEvent,
                                      FailureDetector failureDetector,
@@ -48,7 +50,7 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
     }
 
     protected List<Node> getNodes(ByteArray key) {
-        List<Node> nodes = new ArrayList<Node>();
+        List<Node> nodes = availableNodes = new ArrayList<Node>();
 
         for(Node node: routingStrategy.routeRequest(key.get())) {
             if(failureDetector.isAvailable(node))
@@ -61,5 +63,9 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
                                                             + required + " required.");
 
         return nodes;
+    }
+
+    protected List<Node> getAvailableNodes() {
+        return availableNodes;
     }
 }

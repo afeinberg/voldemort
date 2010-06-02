@@ -21,6 +21,7 @@ import voldemort.cluster.failuredetector.BannagePeriodFailureDetector;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.cluster.failuredetector.FailureDetectorConfig;
 import voldemort.cluster.failuredetector.FailureDetectorUtils;
+import voldemort.cluster.failuredetector.ThresholdFailureDetector;
 import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyFactory;
 import voldemort.routing.RoutingStrategyType;
@@ -28,6 +29,7 @@ import voldemort.store.ForceFailStore;
 import voldemort.store.Store;
 import voldemort.store.StoreDefinition;
 import voldemort.store.memory.InMemoryStorageEngine;
+import voldemort.store.slop.DummySlopStoreFactory;
 import voldemort.utils.ByteArray;
 import voldemort.versioning.Versioned;
 
@@ -42,13 +44,18 @@ import static org.junit.Assert.*;
 public class HintedHandoffTest {
 
     private final static Logger logger = Logger.getLogger(HintedHandoffTest.class);
+
     private final static String STORE_NAME = "test";
     private final static int NUM_THREADS = 4;
     private final static int NUM_NODES = 9;
-    private final static int NUM_FAILED_NODES = 6;
+    private final static int NUM_FAILED_NODES = 4;
+    private final static int REPLICATION_FACTOR = 3;
+    private final static int P_READS = 2;
+    private final static int R_READS = 1;
+    private final static int P_WRITES = 3;
+    private final static int R_WRITES = 2;
     private final static int KEY_LENGTH = 512;
     private final static int VALUE_LENGTH = 1024;
-
 
     private final Class<FailureDetector> failureDetectorClass;
     private Cluster cluster;
@@ -64,18 +71,18 @@ public class HintedHandoffTest {
 
     @Parameters
     public static Collection<Object[]> configs() {
-        return Arrays.asList(new Object[][] { { BannagePeriodFailureDetector.class } });
+        return Arrays.asList(new Object[][] { { BannagePeriodFailureDetector.class }, {ThresholdFailureDetector.class} });
     }
 
     @Before
     public void setUp() throws Exception {
         cluster = getNineNodeCluster();
         storeDef = ServerTestUtils.getStoreDef(STORE_NAME,
-                                               3,
-                                               2,
-                                               1,
-                                               3,
-                                               2,
+                                               REPLICATION_FACTOR,
+                                               P_READS,
+                                               R_READS,
+                                               P_WRITES,
+                                               R_WRITES,
                                                RoutingStrategyType.CONSISTENT_STRATEGY);
 
         subStores = Maps.newHashMap();
@@ -107,12 +114,14 @@ public class HintedHandoffTest {
     @Test
     @Ignore
     public void testHintedHandOff() throws Exception {
+        // Enable hinted handoff, but do not repair reads
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
+                                                            false,
                                                             true,
-                                                            true,
-                                                            failureDetector);
+                                                            failureDetector,
+                                                            new DummySlopStoreFactory());
 
         Multimap<Integer, ByteArray> keysToNodes = HashMultimap.create();
         Map<ByteArray, byte[]> keyValues = Maps.newHashMap();
@@ -132,10 +141,10 @@ public class HintedHandoffTest {
 
         Set<Integer> failedNodes = Sets.newHashSet();
         Random rand = new Random();
-        while (failedNodes.size() < NUM_FAILED_NODES) {
-            int i = rand.nextInt(NUM_NODES);
-            failedNodes.add(i);
-        }
+        int i = rand.nextInt(NUM_NODES);
+
+        for (int j=0; j < NUM_FAILED_NODES; j++)
+            failedNodes.add((i + j) % NUM_NODES);
 
         for (int nodeId: failedNodes) {
             ForceFailStore forceFailStore = getForceFailStore(nodeId);

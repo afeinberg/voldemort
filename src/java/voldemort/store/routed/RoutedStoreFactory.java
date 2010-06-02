@@ -12,6 +12,8 @@ import voldemort.store.Store;
 import voldemort.store.StoreDefinition;
 import voldemort.store.nonblockingstore.NonblockingStore;
 import voldemort.store.nonblockingstore.ThreadPoolBasedNonblockingStoreImpl;
+import voldemort.store.slop.DummySlopStoreFactory;
+import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
 import voldemort.utils.SystemTime;
 
@@ -57,7 +59,8 @@ public class RoutedStoreFactory {
                       nonblockingStores,
                       repairReads,
                       false,
-                      failureDetector);
+                      failureDetector,
+                      new DummySlopStoreFactory());
     }
 
     public RoutedStore create(Cluster cluster,
@@ -66,7 +69,8 @@ public class RoutedStoreFactory {
                               Map<Integer, NonblockingStore> nonblockingStores,
                               boolean repairReads,
                               boolean enableHintedHandoff,
-                              FailureDetector failureDetector) {
+                              FailureDetector failureDetector,
+                              SlopStoreFactory slopStoreFactory) {
         if(isPipelineRoutedStoreEnabled) {
             return new PipelineRoutedStore(storeDefinition.getName(),
                                            nodeStores,
@@ -76,7 +80,8 @@ public class RoutedStoreFactory {
                                            repairReads,
                                            enableHintedHandoff,
                                            routingTimeoutMs,
-                                           failureDetector);
+                                           failureDetector,
+                                           slopStoreFactory);
         } else {
             return new ThreadPoolRoutedStore(storeDefinition.getName(),
                                              nodeStores,
@@ -100,7 +105,8 @@ public class RoutedStoreFactory {
                       nodeStores,
                       repairReads,
                       false,
-                      failureDetector);
+                      failureDetector,
+                      new DummySlopStoreFactory());
     }
 
     public RoutedStore create(Cluster cluster,
@@ -108,7 +114,8 @@ public class RoutedStoreFactory {
                               Map<Integer, Store<ByteArray, byte[]>> nodeStores,
                               boolean repairReads,
                               boolean enableHintedHandoff,
-                              FailureDetector failureDetector) {
+                              FailureDetector failureDetector,
+                              SlopStoreFactory slopStoreFactory) {
         Map<Integer, NonblockingStore> nonblockingStores = Maps.newHashMap();
 
         for(Map.Entry<Integer, Store<ByteArray, byte[]>> entry: nodeStores.entrySet())
@@ -120,7 +127,8 @@ public class RoutedStoreFactory {
                       nonblockingStores,
                       repairReads,
                       enableHintedHandoff,
-                      failureDetector);
+                      failureDetector,
+                      slopStoreFactory);
     }
 
 }

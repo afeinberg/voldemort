@@ -18,6 +18,7 @@ package voldemort.store.routed;
 
 import com.google.common.collect.Sets;
 import voldemort.cluster.Node;
+import voldemort.store.routed.action.PerformHintedHandoff;
 import voldemort.store.routed.action.PerformSerialPutRequests;
 import voldemort.versioning.Versioned;
 
@@ -39,15 +40,18 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     private final Set<Integer> failedNodes = Sets.newHashSet();
 
+    private final String storeName;
+    
     /**
      * Creates pipeline data for a put operation.
      *
      * @param enableHintedHandoff Enable hinted handoff
      */
     
-    public PutPipelineData(boolean enableHintedHandoff) {
+    public PutPipelineData(boolean enableHintedHandoff, String storeName) {
         super();
         this.enableHintedHandoff = enableHintedHandoff;
+        this.storeName = storeName;
     }
 
     /**
@@ -95,15 +99,37 @@ public class PutPipelineData extends BasicPipelineData<Void> {
         this.versionedCopy = versionedCopy;
     }
 
+    /**
+     * Registers the node if of a failed node. Used by {@link PerformHintedHandoff}.
+     *
+     * @param nodeId
+     */
+
     public void addFailedNode(int nodeId) {
         failedNodes.add(nodeId);
     }
+
+    /**
+     * List all the failed nodes.
+     *
+     * @return Ids of failed nodes
+     */
 
     public Collection<Integer> getFailedNodes() {
         return failedNodes;
     }
 
+    /**
+     * Is hinted handoff enabled?
+     *
+     * @return True if hinted handoff is enabled
+     */
+    
     public boolean isHintedHandoffEnabled() {
         return enableHintedHandoff;
+    }
+
+    public String getStoreName() {
+        return storeName;
     }
 }

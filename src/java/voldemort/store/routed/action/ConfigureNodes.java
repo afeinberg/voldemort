@@ -22,9 +22,11 @@ import voldemort.VoldemortException;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.routing.RoutingStrategy;
+import voldemort.store.InsufficientOperationalNodesException;
 import voldemort.store.routed.BasicPipelineData;
 import voldemort.store.routed.Pipeline;
 import voldemort.store.routed.Pipeline.Event;
+import voldemort.store.routed.PutPipelineData;
 import voldemort.utils.ByteArray;
 
 public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
@@ -47,9 +49,19 @@ public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
 
         try {
             nodes = getNodes(key);
+        } catch (InsufficientOperationalNodesException ie) {
+            pipelineData.setFatalError(ie);
+            if (pipelineData instanceof PutPipelineData) {
+                pipelineData.setNodes(getAvailableNodes());
+                pipeline.addEvent(Event.PUT_ABORTED);
+            } else
+                pipeline.addEvent(Event.ERROR);
+
+            return;
         } catch(VoldemortException e) {
             pipelineData.setFatalError(e);
             pipeline.addEvent(Event.ERROR);
+
             return;
         }
 
