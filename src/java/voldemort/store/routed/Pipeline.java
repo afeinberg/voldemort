@@ -55,7 +55,8 @@ public class Pipeline {
         INSUFFICIENT_SUCCESSES,
         RESPONSES_RECEIVED,
         ERROR,
-        MASTER_DETERMINED;
+        MASTER_DETERMINED,
+        HANDOFF_FINISHED;
 
     }
 

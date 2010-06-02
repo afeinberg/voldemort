@@ -31,6 +31,19 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     private Versioned<byte[]> versionedCopy;
 
+    private final boolean enableHintedHandoff;
+
+    /**
+     * Creates pipeline data for a put operation.
+     *
+     * @param enableHintedHandoff Enable hinted handoff
+     */
+    
+    public PutPipelineData(boolean enableHintedHandoff) {
+        super();
+        this.enableHintedHandoff = enableHintedHandoff;
+    }
+
     /**
      * Returns the previously determined "master" node. This is the first node
      * in the preference list that succeeded in "putting" the value.

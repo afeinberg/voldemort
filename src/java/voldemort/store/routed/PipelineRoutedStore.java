@@ -35,17 +35,7 @@ import voldemort.store.nonblockingstore.NonblockingStoreCallback;
 import voldemort.store.nonblockingstore.NonblockingStoreRequest;
 import voldemort.store.routed.Pipeline.Event;
 import voldemort.store.routed.Pipeline.Operation;
-import voldemort.store.routed.action.ConfigureNodes;
-import voldemort.store.routed.action.GetAllConfigureNodes;
-import voldemort.store.routed.action.GetAllReadRepair;
-import voldemort.store.routed.action.IncrementClock;
-import voldemort.store.routed.action.PerformParallelGetAllRequests;
-import voldemort.store.routed.action.PerformParallelPutRequests;
-import voldemort.store.routed.action.PerformParallelRequests;
-import voldemort.store.routed.action.PerformSerialGetAllRequests;
-import voldemort.store.routed.action.PerformSerialPutRequests;
-import voldemort.store.routed.action.PerformSerialRequests;
-import voldemort.store.routed.action.ReadRepair;
+import voldemort.store.routed.action.*;
 import voldemort.utils.ByteArray;
 import voldemort.utils.SystemTime;
 import voldemort.versioning.Version;
@@ -339,7 +329,7 @@ public class PipelineRoutedStore extends RoutedStore {
     public void put(ByteArray key, Versioned<byte[]> versioned) throws VoldemortException {
         StoreUtils.assertValidKey(key);
 
-        PutPipelineData pipelineData = new PutPipelineData();
+        PutPipelineData pipelineData = new PutPipelineData(enableHintedHandoff);
         Pipeline pipeline = new Pipeline(Operation.PUT, timeoutMs, TimeUnit.MILLISECONDS);
 
         pipeline.addEventAction(Event.STARTED,
@@ -367,10 +357,24 @@ public class PipelineRoutedStore extends RoutedStore {
                                                                storeDef.getRequiredWrites(),
                                                                timeoutMs,
                                                                nonblockingStores));
-        pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
-                                                                             Event.COMPLETED,
-                                                                             versioned,
-                                                                             time));
+
+        if (enableHintedHandoff) {
+            pipeline.addEventAction(Event.RESPONSES_RECEIVED, new PerformHintedHandoff(pipelineData,
+                                                                                       Event.HANDOFF_FINISHED,
+                                                                                       key,
+                                                                                       failureDetector,
+                                                                                       timeoutMs,
+                                                                                       nonblockingStores));
+            pipeline.addEventAction(Event.HANDOFF_FINISHED, new IncrementClock(pipelineData,
+                                                                               Event.COMPLETED,
+                                                                               versioned,
+                                                                               time));
+        } else {
+            pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
+                                                                                 Event.COMPLETED,
+                                                                                 versioned,
+                                                                                 time));
+        }
 
         pipeline.addEvent(Event.STARTED);
         pipeline.execute();
