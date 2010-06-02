@@ -114,7 +114,11 @@ public class PerformSerialPutRequests extends
             pipelineData.setFatalError(new InsufficientOperationalNodesException("No master node succeeded!",
                                                                                  failures.size() > 0 ? failures.get(0)
                                                                                                     : null));
-            pipeline.addEvent(Event.ERROR);
+            if (pipelineData.isHintedHandoffEnabled())
+                pipeline.addEvent(Event.PUT_ABORTED);
+            else
+                pipeline.addEvent(Event.ERROR);
+
             return;
         }
 
@@ -131,7 +135,10 @@ public class PerformSerialPutRequests extends
                                                                                              + pipelineData.getSuccesses()
                                                                                              + " succeeded",
                                                                                      pipelineData.getFailures()));
-                pipeline.addEvent(Event.ERROR);
+                if (pipelineData.isHintedHandoffEnabled())
+                    pipeline.addEvent(Event.PUT_ABORTED);
+                else
+                    pipeline.addEvent(Event.ERROR);
             } else {
                 pipeline.addEvent(completeEvent);
             }

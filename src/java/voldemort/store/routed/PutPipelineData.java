@@ -16,13 +16,13 @@
 
 package voldemort.store.routed;
 
+import com.google.common.collect.Sets;
 import voldemort.cluster.Node;
 import voldemort.store.routed.action.PerformSerialPutRequests;
 import voldemort.versioning.Versioned;
 
 import java.util.Collection;
-import java.util.Deque;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.Set;
 
 /**
  * This is used only by the "put" operation as it includes data specific only to
@@ -37,7 +37,7 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     private final boolean enableHintedHandoff;
 
-    private final Deque<Integer> failedNodes = new LinkedBlockingDeque<Integer>();
+    private final Set<Integer> failedNodes = Sets.newHashSet();
 
     /**
      * Creates pipeline data for a put operation.
@@ -103,4 +103,7 @@ public class PutPipelineData extends BasicPipelineData<Void> {
         return failedNodes;
     }
 
+    public boolean isHintedHandoffEnabled() {
+        return enableHintedHandoff;
+    }
 }

@@ -369,6 +369,12 @@ public class PipelineRoutedStore extends RoutedStore {
                                                                                Event.COMPLETED,
                                                                                versioned,
                                                                                time));
+            pipeline.addEventAction(Event.PUT_ABORTED, new PerformHintedHandoff(pipelineData,
+                                                                                Event.ERROR,
+                                                                                key,
+                                                                                failureDetector,
+                                                                                timeoutMs,
+                                                                                nonblockingStores));
         } else {
             pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
                                                                                  Event.COMPLETED,

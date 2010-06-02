@@ -56,7 +56,8 @@ public class Pipeline {
         RESPONSES_RECEIVED,
         ERROR,
         MASTER_DETERMINED,
-        HANDOFF_FINISHED;
+        HANDOFF_FINISHED,
+        PUT_ABORTED;
 
     }
 
