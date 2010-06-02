@@ -118,6 +118,7 @@ public class PerformParallelPutRequests extends
 
         for(Response<ByteArray, Object> response: responses.values()) {
             if(response.getValue() instanceof Exception) {
+                pipelineData.addFailedNode(response.getNode().getId());
                 if(handleResponseError(response, pipeline, failureDetector))
                     return;
             } else {

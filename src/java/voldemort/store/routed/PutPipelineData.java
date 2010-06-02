@@ -20,6 +20,10 @@ import voldemort.cluster.Node;
 import voldemort.store.routed.action.PerformSerialPutRequests;
 import voldemort.versioning.Versioned;
 
+import java.util.Collection;
+import java.util.Deque;
+import java.util.concurrent.LinkedBlockingDeque;
+
 /**
  * This is used only by the "put" operation as it includes data specific only to
  * that operation.
@@ -32,6 +36,8 @@ public class PutPipelineData extends BasicPipelineData<Void> {
     private Versioned<byte[]> versionedCopy;
 
     private final boolean enableHintedHandoff;
+
+    private final Deque<Integer> failedNodes = new LinkedBlockingDeque<Integer>();
 
     /**
      * Creates pipeline data for a put operation.
@@ -87,6 +93,14 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     public void setVersionedCopy(Versioned<byte[]> versionedCopy) {
         this.versionedCopy = versionedCopy;
+    }
+
+    public void addFailedNode(int nodeId) {
+        failedNodes.add(nodeId);
+    }
+
+    public Collection<Integer> getFailedNodes() {
+        return failedNodes;
     }
 
 }

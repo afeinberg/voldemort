@@ -31,6 +31,10 @@ public class PerformHintedHandoff extends
     }
     
     public void execute(Pipeline pipeline) {
+        for (int nodeId: pipelineData.getFailedNodes()) {
+            if (logger.isDebugEnabled())
+                logger.debug("Performing hinted handoff for node id " + nodeId);
+        }
 
     }
 }
