@@ -18,7 +18,9 @@ package voldemort.store.routed.action;
 
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import voldemort.VoldemortException;
+import voldemort.annotations.concurrency.Immutable;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.routing.RoutingStrategy;
@@ -53,16 +55,24 @@ public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
             pipelineData.setFatalError(ie);
             if (pipelineData instanceof PutPipelineData) {
                 PutPipelineData ppd = (PutPipelineData) pipelineData;
-                pipelineData.setNodes(getAvailableNodes());
                 if (ppd.isHintedHandoffEnabled())
                     pipeline.addEvent(Event.PUT_ABORTED);
+                else
+                    pipeline.addEvent(Event.ERROR);
             } else
                 pipeline.addEvent(Event.ERROR);
 
             return;
         } catch(VoldemortException e) {
             pipelineData.setFatalError(e);
-            pipeline.addEvent(Event.ERROR);
+            if (pipelineData instanceof PutPipelineData) {
+                PutPipelineData ppd = (PutPipelineData) pipelineData;
+                if (ppd.isHintedHandoffEnabled())
+                    pipeline.addEvent(Event.PUT_ABORTED);
+                else
+                    pipeline.addEvent(Event.ERROR);
+            } else
+                pipeline.addEvent(Event.ERROR);
 
             return;
         }

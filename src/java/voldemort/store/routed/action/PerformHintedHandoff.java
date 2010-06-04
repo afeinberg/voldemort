@@ -1,58 +1,55 @@
 package voldemort.store.routed.action;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import voldemort.VoldemortException;
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.store.InsufficientOperationalNodesException;
 import voldemort.store.Store;
 import voldemort.store.UnreachableStoreException;
-import voldemort.store.nonblockingstore.NonblockingStore;
 import voldemort.store.routed.Pipeline;
 import voldemort.store.routed.PutPipelineData;
 import voldemort.store.slop.Slop;
 import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
-import voldemort.versioning.ObsoleteVersionException;
-import voldemort.versioning.VectorClock;
 import voldemort.versioning.Versioned;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 
 public class PerformHintedHandoff extends
         AbstractKeyBasedAction<ByteArray, Void, PutPipelineData> {
 
     private final FailureDetector failureDetector;
 
-    private final long timeoutMs;
-
-    private final Map<Integer, NonblockingStore> nonblockingStores;
-
     private final SlopStoreFactory slopStoreFactory;
+
+    private final Cluster cluster;
+
+    private final Versioned<byte[]> versioned;
 
     public PerformHintedHandoff(PutPipelineData pipelineData,
                                 Pipeline.Event completeEvent,
                                 ByteArray key,
+                                Versioned<byte[]> versioned,
                                 FailureDetector failureDetector,
-                                long timeoutMs,
-                                Map<Integer, NonblockingStore> nonblockingStores,
-                                SlopStoreFactory slopStoreFactory) {
+                                SlopStoreFactory slopStoreFactory,
+                                Cluster cluster) {
         super(pipelineData, completeEvent, key);
         this.failureDetector = failureDetector;
-        this.timeoutMs = timeoutMs;
-        this.nonblockingStores = nonblockingStores;
         this.slopStoreFactory = slopStoreFactory;
+        this.cluster = cluster;
+        this.versioned = versioned;
     }
     
     public void execute(Pipeline pipeline) {
-        Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMap();
+        Set<Node> pipelineNodes = Sets.newHashSet(cluster.getNodes());
+        Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMapWithExpectedSize(pipelineNodes.size());
 
-        for (Node node: pipelineData.getNodes()) {
+        for (Node node: pipelineNodes) {
             try {
                 slopStores.put(node.getId(), slopStoreFactory.create(node.getId()));
             } catch (Exception e) {
@@ -61,12 +58,17 @@ public class PerformHintedHandoff extends
         }
 
         for (int nodeId: pipelineData.getFailedNodes()) {
+            Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
+            if (versionedCopy == null)
+                versionedCopy = versioned;
+
             if (logger.isTraceEnabled())
                 logger.trace("Performing hinted handoff for node " + nodeId
-                             + ", store " + pipelineData.getStoreName());
+                             + ", store. " + pipelineData.getStoreName() + " key "
+                             + key + ", value " + versionedCopy);
 
             boolean persisted = false;
-            Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
+
             Slop slop = new Slop(pipelineData.getStoreName(),
                                  Slop.Operation.PUT,
                                  key,
@@ -74,28 +76,42 @@ public class PerformHintedHandoff extends
                                  nodeId,
                                  new Date());
 
-            for (Map.Entry<Integer, Store<ByteArray, Slop>> entry: slopStores.entrySet()) {
-                Store<ByteArray,Slop> slopStore = entry.getValue();
-                int slopNodeId = entry.getKey();
+            Set<Node> used = Sets.newHashSetWithExpectedSize(pipelineNodes.size());
+            for (Node slopNode: pipelineNodes) {
+                int slopNodeId = slopNode.getId();
+                Store<ByteArray,Slop> slopStore = slopStores.get(slopNodeId);
 
-                if (slopNodeId != nodeId) {
+                if (slopNodeId != nodeId && failureDetector.isAvailable(slopNode)) {
+                    long start = System.currentTimeMillis();
                     try {
+                        if (logger.isTraceEnabled())
+                            logger.trace("Writing slop " + slop);
+
                         slopStore.put(slop.makeKey(),
                                       new Versioned<Slop>(slop, versionedCopy.getVersion()));
-                        persisted = true;
 
+                        persisted = true;
+                        failureDetector.recordSuccess(slopNode, System.currentTimeMillis() - start);
+
+                        used.add(slopNode);
                         if (logger.isTraceEnabled())
                             logger.trace("Finished hinted handoff for " + nodeId
                                          + " writing slop to " + slopNodeId);
 
                         break;
                     } catch (UnreachableStoreException e) {
+                        failureDetector.recordException(slopNode, System.currentTimeMillis() - start, e);
                         logger.warn("Error during hinted handoff ", e);
-                        pipelineData.recordFailure(e);
+                    } catch (VoldemortException e) {
+                        logger.error("Unexpected exception during hinted handoff ", e);
                     }
                 }
             }
 
+            if (pipelineNodes.size() > used.size()) {
+                for (Node usedNode: used)
+                    pipelineNodes.remove(usedNode);
+            }
 
             Exception e = pipelineData.getFatalError();
             if (e != null) {

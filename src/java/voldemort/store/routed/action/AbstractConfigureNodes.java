@@ -17,6 +17,7 @@
 package voldemort.store.routed.action;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import voldemort.cluster.Node;
@@ -25,6 +26,7 @@ import voldemort.routing.RoutingStrategy;
 import voldemort.store.InsufficientOperationalNodesException;
 import voldemort.store.routed.PipelineData;
 import voldemort.store.routed.Pipeline.Event;
+import voldemort.store.routed.PutPipelineData;
 import voldemort.utils.ByteArray;
 
 public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>> extends
@@ -35,8 +37,6 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
     protected final int required;
 
     protected final RoutingStrategy routingStrategy;
-
-    private List<Node> availableNodes;
 
     protected AbstractConfigureNodes(PD pipelineData,
                                      Event completeEvent,
@@ -50,11 +50,18 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
     }
 
     protected List<Node> getNodes(ByteArray key) {
-        List<Node> nodes = availableNodes = new ArrayList<Node>();
+        List<Node> nodes = new ArrayList<Node>();
 
         for(Node node: routingStrategy.routeRequest(key.get())) {
             if(failureDetector.isAvailable(node))
                 nodes.add(node);
+            else {
+                if (pipelineData instanceof PutPipelineData) {
+                    PutPipelineData ppd = (PutPipelineData) pipelineData;
+                    if (ppd.isHintedHandoffEnabled())
+                        ppd.addFailedNode(node.getId());
+                }
+            }
         }
 
         if(nodes.size() < required)
@@ -63,9 +70,5 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
                                                             + required + " required.");
 
         return nodes;
-    }
-
-    protected List<Node> getAvailableNodes() {
-        return availableNodes;
     }
 }

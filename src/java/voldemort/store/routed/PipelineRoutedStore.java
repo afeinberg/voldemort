@@ -55,6 +55,8 @@ public class PipelineRoutedStore extends RoutedStore {
 
     private final SlopStoreFactory slopStoreFactory;
 
+    private final Cluster cluster;
+
     /**
      * Create a PipelineRoutedStore
      * 
@@ -89,6 +91,7 @@ public class PipelineRoutedStore extends RoutedStore {
         this.nonblockingStores = new ConcurrentHashMap<Integer, NonblockingStore>(nonblockingStores);
         this.enableHintedHandoff = enableHintedHandoff;
         this.slopStoreFactory = slopStoreFactory;
+        this.cluster = cluster;
     }
 
     public List<Versioned<byte[]>> get(final ByteArray key) {
@@ -368,10 +371,10 @@ public class PipelineRoutedStore extends RoutedStore {
             pipeline.addEventAction(Event.RESPONSES_RECEIVED, new PerformHintedHandoff(pipelineData,
                                                                                        Event.HANDOFF_FINISHED,
                                                                                        key,
+                                                                                       versioned,
                                                                                        failureDetector,
-                                                                                       timeoutMs,
-                                                                                       nonblockingStores,
-                                                                                       slopStoreFactory));
+                                                                                       slopStoreFactory,
+                                                                                       cluster));
             pipeline.addEventAction(Event.HANDOFF_FINISHED, new IncrementClock(pipelineData,
                                                                                Event.COMPLETED,
                                                                                versioned,
@@ -379,10 +382,10 @@ public class PipelineRoutedStore extends RoutedStore {
             pipeline.addEventAction(Event.PUT_ABORTED, new PerformHintedHandoff(pipelineData,
                                                                                 Event.ERROR,
                                                                                 key,
+                                                                                versioned,
                                                                                 failureDetector,
-                                                                                timeoutMs,
-                                                                                nonblockingStores,
-                                                                                slopStoreFactory));
+                                                                                slopStoreFactory,
+                                                                                cluster));
         } else {
             pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
                                                                                  Event.COMPLETED,
