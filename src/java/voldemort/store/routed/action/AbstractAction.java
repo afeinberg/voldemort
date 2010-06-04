@@ -25,6 +25,7 @@ import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.store.UnreachableStoreException;
 import voldemort.store.routed.Pipeline;
 import voldemort.store.routed.PipelineData;
+import voldemort.store.routed.PutPipelineData;
 import voldemort.store.routed.Response;
 import voldemort.store.routed.Pipeline.Event;
 import voldemort.utils.Utils;
@@ -66,7 +67,14 @@ public abstract class AbstractAction<K, V, PD extends PipelineData<K, V>> implem
             failureDetector.recordException(node, requestTime, (UnreachableStoreException) e);
         } else if(e instanceof VoldemortApplicationException) {
             pipelineData.setFatalError((VoldemortApplicationException) e);
-            pipeline.addEvent(Event.ERROR);
+            if (pipelineData instanceof PutPipelineData) {
+                PutPipelineData ppd = (PutPipelineData) pipelineData;
+                if (ppd.isHintedHandoffEnabled())
+                    pipeline.addEvent(Event.PUT_ABORTED);
+                else
+                    pipeline.addEvent(Event.ERROR);
+            } else
+                pipeline.addEvent(Event.ERROR);
 
             if(logger.isEnabledFor(Level.WARN))
                 logger.warn("Error is fatal - aborting further pipeline processing");

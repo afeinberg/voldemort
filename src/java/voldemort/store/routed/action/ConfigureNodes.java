@@ -52,8 +52,10 @@ public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
         } catch (InsufficientOperationalNodesException ie) {
             pipelineData.setFatalError(ie);
             if (pipelineData instanceof PutPipelineData) {
+                PutPipelineData ppd = (PutPipelineData) pipelineData;
                 pipelineData.setNodes(getAvailableNodes());
-                pipeline.addEvent(Event.PUT_ABORTED);
+                if (ppd.isHintedHandoffEnabled())
+                    pipeline.addEvent(Event.PUT_ABORTED);
             } else
                 pipeline.addEvent(Event.ERROR);
 

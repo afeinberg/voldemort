@@ -1,6 +1,8 @@
 package voldemort.store.routed;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -42,9 +44,11 @@ import voldemort.store.slop.MockSlopStoreFactory;
 import voldemort.store.slop.Slop;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
+import voldemort.versioning.ObsoleteVersionException;
 import voldemort.versioning.Versioned;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -90,7 +94,7 @@ public class HintedHandoffTest {
 
     @Parameters
     public static Collection<Object[]> configs() {
-        return Arrays.asList(new Object[][] { { BannagePeriodFailureDetector.class }, {ThresholdFailureDetector.class} });
+        return Arrays.asList(new Object[][] { { BannagePeriodFailureDetector.class } });
     }
 
     @Before
@@ -167,7 +171,7 @@ public class HintedHandoffTest {
                                                             failureDetector,
                                                             slopStoreFactory);
 
-        Multimap<Integer, ByteArray> keysToNodes = HashMultimap.create();
+        Multimap<ByteArray,Integer> keysToNodes = HashMultimap.create();
         Map<ByteArray, byte[]> keyValues = Maps.newHashMap();
 
         RoutingStrategyFactory routingStrategyFactory = new RoutingStrategyFactory();
@@ -179,12 +183,12 @@ public class HintedHandoffTest {
             byte[] randomValue = TestUtils.randomBytes(VALUE_LENGTH);
 
             for (Node node: routingStrategy.routeRequest(randomKey.get()))
-                keysToNodes.put(node.getId(), randomKey);
+                keysToNodes.put(randomKey, node.getId());
             
             keyValues.put(randomKey, randomValue);
         }
 
-        Set<Integer> failedNodes = Sets.newHashSet();
+        Set<Integer> failedNodes = new CopyOnWriteArraySet<Integer>();
         Random rand = new Random();
         int i = rand.nextInt(NUM_NODES);
 
@@ -198,21 +202,24 @@ public class HintedHandoffTest {
         }
 
         Set<ByteArray> failedKeys = Sets.newHashSet();
-        for (Map.Entry<Integer, ByteArray> entry: keysToNodes.entries()) {
-            int nodeId = entry.getKey();
-            ByteArray key = entry.getValue();
+        for (ByteArray key: keysToNodes.keySet()) {
+            Iterable<Integer> nodeIds = keysToNodes.get(key);
 
-            if (!failedKeys.contains(key)) {
-                if (failedNodes.contains(nodeId))
+            for (int n = 0; n < P_WRITES; n++) {
+                int nodeId = Iterables.get(nodeIds, n);
+                if (failedNodes.contains(nodeId)) {
                     failedKeys.add(key);
-
-                try {
-                    Versioned<byte[]> versioned = new Versioned<byte[]>(keyValues.get(key));
-                    routedStore.put(key, versioned);
-                } catch (Exception e) {
-
+                    break;
                 }
             }
+
+            try {
+                Versioned<byte[]> versioned = new Versioned<byte[]>(keyValues.get(key));
+                routedStore.put(key, versioned);
+            } catch (Exception e) {
+                logger.warn(e);
+            }
+            
         }
 
         Map<ByteArray, byte[]> dataInSlops = Maps.newHashMap();
@@ -250,6 +257,13 @@ public class HintedHandoffTest {
             logger.info("Stopped failing requests to " + nodeId);
         }
 
+        while (!failedNodes.isEmpty()) {
+            for (int nodeId: failedNodes) {
+                if (failureDetector.isAvailable(cluster.getNodeById(nodeId)))
+                    failedNodes.remove(nodeId);
+            }
+        }
+        
         for (SlopPusherJob job: slopPusherJobs.values())
             pusherThreadPool.execute(job);
 

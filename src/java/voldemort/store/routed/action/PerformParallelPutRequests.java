@@ -136,8 +136,10 @@ public class PerformParallelPutRequests extends
                                                                                          + pipelineData.getSuccesses()
                                                                                          + " succeeded",
                                                                                  pipelineData.getFailures()));
-
-            pipeline.addEvent(Event.ERROR);
+            if (pipelineData.isHintedHandoffEnabled())
+                pipeline.addEvent(Event.PUT_ABORTED);
+            else
+                pipeline.addEvent(Event.ERROR);
         } else {
             pipeline.addEvent(completeEvent);
         }

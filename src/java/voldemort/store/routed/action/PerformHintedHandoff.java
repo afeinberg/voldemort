@@ -2,6 +2,7 @@ package voldemort.store.routed.action;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.store.InsufficientOperationalNodesException;
@@ -13,11 +14,14 @@ import voldemort.store.routed.PutPipelineData;
 import voldemort.store.slop.Slop;
 import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
+import voldemort.versioning.ObsoleteVersionException;
+import voldemort.versioning.VectorClock;
 import voldemort.versioning.Versioned;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public class PerformHintedHandoff extends
@@ -46,11 +50,11 @@ public class PerformHintedHandoff extends
     }
     
     public void execute(Pipeline pipeline) {
-        List<Store<ByteArray, Slop>> slopStores = Lists.newArrayList();
+        Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMap();
 
         for (Node node: pipelineData.getNodes()) {
             try {
-                slopStores.add(slopStoreFactory.create(node.getId()));
+                slopStores.put(node.getId(), slopStoreFactory.create(node.getId()));
             } catch (Exception e) {
                 logger.warn("Unable to create a slop store for " + node, e);
             }
@@ -62,24 +66,36 @@ public class PerformHintedHandoff extends
                              + ", store " + pipelineData.getStoreName());
 
             boolean persisted = false;
-            
+            Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
             Slop slop = new Slop(pipelineData.getStoreName(),
                                  Slop.Operation.PUT,
                                  key,
-                                 pipelineData.getVersionedCopy().getValue(),
+                                 versionedCopy.getValue(),
                                  nodeId,
                                  new Date());
 
-            for (Store<ByteArray, Slop> slopStore: slopStores) {
-                try {
-                    slopStore.put(slop.makeKey(),
-                                  new Versioned<Slop>(slop, pipelineData.getVersionedCopy().getVersion()));
-                    persisted = true;
-                    break;
-                } catch (UnreachableStoreException e) {
-                    pipelineData.recordFailure(e);
+            for (Map.Entry<Integer, Store<ByteArray, Slop>> entry: slopStores.entrySet()) {
+                Store<ByteArray,Slop> slopStore = entry.getValue();
+                int slopNodeId = entry.getKey();
+
+                if (slopNodeId != nodeId) {
+                    try {
+                        slopStore.put(slop.makeKey(),
+                                      new Versioned<Slop>(slop, versionedCopy.getVersion()));
+                        persisted = true;
+
+                        if (logger.isTraceEnabled())
+                            logger.trace("Finished hinted handoff for " + nodeId
+                                         + " writing slop to " + slopNodeId);
+
+                        break;
+                    } catch (UnreachableStoreException e) {
+                        logger.warn("Error during hinted handoff ", e);
+                        pipelineData.recordFailure(e);
+                    }
                 }
             }
+
 
             Exception e = pipelineData.getFatalError();
             if (e != null) {
@@ -93,6 +109,7 @@ public class PerformHintedHandoff extends
             }
 
         }
-
+        
+        pipeline.addEvent(completeEvent);
     }
 }
