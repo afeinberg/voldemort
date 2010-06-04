@@ -70,6 +70,9 @@ public class SlopPusherJob implements Runnable {
                     Store<ByteArray, byte[]> store = storeRepo.getNodeStore(slop.getStoreName(),
                                                                             slop.getNodeId());
                     try {
+                        if (logger.isTraceEnabled())
+                            logger.trace(slop);
+                        
                         if(slop.getOperation() == Operation.PUT)
                             store.put(keyAndVal.getFirst(),
                                       new Versioned<byte[]>(slop.getValue(), versioned.getVersion()));
@@ -82,6 +85,8 @@ public class SlopPusherJob implements Runnable {
                     } catch(ObsoleteVersionException e) {
                         // okay it is old, just delete it
                         slopStore.delete(slop.makeKey(), versioned.getVersion());
+                        if (logger.isTraceEnabled())
+                            logger.trace(e, e);
                     }
                 } catch(Exception e) {
                     logger.error(e);

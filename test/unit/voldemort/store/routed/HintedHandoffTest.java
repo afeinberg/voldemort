@@ -1,10 +1,6 @@
 package voldemort.store.routed;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
@@ -33,10 +29,7 @@ import voldemort.utils.ByteUtils;
 import voldemort.versioning.Versioned;
 
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static voldemort.VoldemortTestConstants.*;
 import static org.junit.Assert.*;
@@ -61,10 +54,9 @@ public class HintedHandoffTest {
 
     private final Class<FailureDetector> failureDetectorClass;
 
-    private final Map<Integer, Store<ByteArray, byte[]>> subStores = Maps.newHashMap();
-    private final Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMap();
-    private final Map<Integer, StoreRepository> storeRepos = Maps.newHashMap();
-    private final Map<Integer, SlopPusherJob> slopPusherJobs = Maps.newHashMap();
+    private final Map<Integer, Store<ByteArray, byte[]>> subStores = new ConcurrentHashMap<Integer, Store<ByteArray,byte[]>>();
+    private final Map<Integer, Store<ByteArray, Slop>> slopStores = new ConcurrentHashMap<Integer, Store<ByteArray, Slop>>();
+    private final List<SlopPusherJob> slopPusherJobs = Lists.newLinkedList();
 
     private Cluster cluster;
     private FailureDetector failureDetector;
@@ -113,17 +105,17 @@ public class HintedHandoffTest {
             storeRepo.addLocalStore(subStores.get(nodeId));
 
             for (int i = 0; i < NUM_NODES; i++) {
-                storeRepo.addNodeStore(i, subStores.get(i));
+                if (i != node.getId())
+                    storeRepo.addNodeStore(i, subStores.get(i));
             }
 
             StorageEngine<ByteArray, Slop> slopStorageEngine = new InMemoryStorageEngine<ByteArray, Slop>(SLOP_STORE_NAME);
             storeRepo.setSlopStore(slopStorageEngine);
 
             slopStores.put(nodeId, slopStorageEngine);
-            storeRepos.put(nodeId, storeRepo);
 
             SlopPusherJob pusher = new SlopPusherJob(storeRepo);
-            slopPusherJobs.put(nodeId, pusher);
+            slopPusherJobs.add(pusher);
         }
 
         routedStoreThreadPool = Executors.newFixedThreadPool(NUM_THREADS);
@@ -150,11 +142,10 @@ public class HintedHandoffTest {
     public void testHintedHandOff() throws Exception {
         MockSlopStoreFactory slopStoreFactory = new MockSlopStoreFactory(slopStores);
 
-        // Enable hinted handoff, but do not repair reads
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
-                                                            false,
+                                                            true,
                                                             true,
                                                             failureDetector,
                                                             slopStoreFactory);
@@ -249,9 +240,9 @@ public class HintedHandoffTest {
 
         FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig();
         failureDetectorConfig.setImplementationClassName(failureDetectorClass.getName());
-        failureDetectorConfig.setBannagePeriod(100);
-        failureDetectorConfig.setRequestLengthThreshold(10);
-        failureDetectorConfig.setAsyncRecoveryInterval(5);
+        failureDetectorConfig.setBannagePeriod(9);
+        failureDetectorConfig.setRequestLengthThreshold(3);
+        failureDetectorConfig.setAsyncRecoveryInterval(3);
         failureDetectorConfig.setNodes(cluster.getNodes());
         failureDetectorConfig.setStoreVerifier(MutableStoreVerifier.create(subStores));
 
@@ -262,11 +253,10 @@ public class HintedHandoffTest {
     public void testHintedHandoffSlopPusher() throws Exception {
         MockSlopStoreFactory slopStoreFactory = new MockSlopStoreFactory(slopStores);
 
-        // Enable hinted handoff, but do not repair reads
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
-                                                            false,
+                                                            true,
                                                             true,
                                                             failureDetector,
                                                             slopStoreFactory);
@@ -354,19 +344,19 @@ public class HintedHandoffTest {
             }
         }
 
-        Thread.sleep(100);
-
-        for (SlopPusherJob job: slopPusherJobs.values())
+        for (SlopPusherJob job: slopPusherJobs)
             pusherThreadPool.submit(job);
 
         pusherThreadPool.shutdown();
         pusherThreadPool.awaitTermination(5, TimeUnit.SECONDS);
 
+        Thread.sleep(1250);
+        
         for (Map.Entry<ByteArray, ByteArray> entry: keyValues.entrySet()) {
             List<Versioned<byte[]>> versionedValues = routedStore.get(entry.getKey());
 
-            assertTrue(versionedValues.size() > 0);
-            assertEquals("slop stores have correctly been pushed",
+            assertTrue("slop entry pushed for " + entry.getKey(), versionedValues.size() > 0);
+            assertEquals("slop entry correct for " + entry.getKey(),
                          entry.getValue(),
                          new ByteArray(versionedValues.get(0).getValue()));
         }

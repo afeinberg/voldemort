@@ -1,5 +1,6 @@
 package voldemort.store.routed.action;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import voldemort.VoldemortException;
@@ -16,9 +17,7 @@ import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
 import voldemort.versioning.Versioned;
 
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class PerformHintedHandoff extends
         AbstractKeyBasedAction<ByteArray, Void, PutPipelineData> {
@@ -30,6 +29,8 @@ public class PerformHintedHandoff extends
     private final Cluster cluster;
 
     private final Versioned<byte[]> versioned;
+
+    private final Random random = new Random();
 
     public PerformHintedHandoff(PutPipelineData pipelineData,
                                 Pipeline.Event completeEvent,
@@ -46,7 +47,9 @@ public class PerformHintedHandoff extends
     }
     
     public void execute(Pipeline pipeline) {
-        Set<Node> pipelineNodes = Sets.newHashSet(cluster.getNodes());
+        List<Node> pipelineNodes = Lists.newArrayList(cluster.getNodes());
+        Collections.shuffle(pipelineNodes, random);
+        
         Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMapWithExpectedSize(pipelineNodes.size());
 
         for (Node node: pipelineNodes) {
@@ -59,7 +62,7 @@ public class PerformHintedHandoff extends
 
         for (int nodeId: pipelineData.getFailedNodes()) {
             Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
-            if (versionedCopy == null)
+            if (versionedCopy == null || versionedCopy.getValue() == null)
                 versionedCopy = versioned;
 
             if (logger.isTraceEnabled())
