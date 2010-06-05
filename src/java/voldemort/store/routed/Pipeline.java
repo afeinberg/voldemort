@@ -57,7 +57,7 @@ public class Pipeline {
         ERROR,
         MASTER_DETERMINED,
         HANDOFF_FINISHED,
-        PUT_ABORTED;
+        ABORTED;
 
     }
 

@@ -48,10 +48,9 @@ public class PerformHintedHandoff extends
     
     public void execute(Pipeline pipeline) {
         List<Node> pipelineNodes = Lists.newArrayList(cluster.getNodes());
-        Collections.shuffle(pipelineNodes, random);
-        
         Map<Integer, Store<ByteArray, Slop>> slopStores = Maps.newHashMapWithExpectedSize(pipelineNodes.size());
 
+        Collections.shuffle(pipelineNodes, random);
         for (Node node: pipelineNodes) {
             try {
                 slopStores.put(node.getId(), slopStoreFactory.create(node.getId()));
@@ -60,18 +59,17 @@ public class PerformHintedHandoff extends
             }
         }
 
-        for (int nodeId: pipelineData.getFailedNodes()) {
+        for (Node node: pipelineData.getFailedNodes()) {
             Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
             if (versionedCopy == null || versionedCopy.getValue() == null)
                 versionedCopy = versioned;
+            int nodeId = node.getId();
 
             if (logger.isTraceEnabled())
-                logger.trace("Performing hinted handoff for node " + nodeId
+                logger.trace("Performing hinted handoff for node " + node
                              + ", store. " + pipelineData.getStoreName() + " key "
                              + key + ", value " + versionedCopy);
-
-            boolean persisted = false;
-
+            
             Slop slop = new Slop(pipelineData.getStoreName(),
                                  Slop.Operation.PUT,
                                  key,
@@ -80,6 +78,7 @@ public class PerformHintedHandoff extends
                                  new Date());
 
             Set<Node> used = Sets.newHashSetWithExpectedSize(pipelineNodes.size());
+            boolean persisted = false;
             for (Node slopNode: pipelineNodes) {
                 int slopNodeId = slopNode.getId();
                 Store<ByteArray,Slop> slopStore = slopStores.get(slopNodeId);
@@ -87,26 +86,27 @@ public class PerformHintedHandoff extends
                 if (slopNodeId != nodeId && failureDetector.isAvailable(slopNode)) {
                     long start = System.currentTimeMillis();
                     try {
+
                         if (logger.isTraceEnabled())
                             logger.trace("Writing slop " + slop);
 
                         slopStore.put(slop.makeKey(),
                                       new Versioned<Slop>(slop, versionedCopy.getVersion()));
-
                         persisted = true;
+                        used.add(slopNode);
+
                         failureDetector.recordSuccess(slopNode, System.currentTimeMillis() - start);
 
-                        used.add(slopNode);
                         if (logger.isTraceEnabled())
-                            logger.trace("Finished hinted handoff for " + nodeId
-                                         + " writing slop to " + slopNodeId);
-
+                            logger.trace("Finished hinted handoff for " + node
+                                         + " writing slop to " + slopNode);
+                        
                         break;
                     } catch (UnreachableStoreException e) {
                         failureDetector.recordException(slopNode, System.currentTimeMillis() - start, e);
                         logger.warn("Error during hinted handoff ", e);
                     } catch (VoldemortException e) {
-                        logger.error("Unexpected exception during hinted handoff ", e);
+                        logger.error("Unexpected " + e + " during hinted handoff ", e);
                     }
                 }
             }

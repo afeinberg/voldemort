@@ -145,7 +145,7 @@ public class HintedHandoffTest {
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
-                                                            true,
+                                                            false,
                                                             true,
                                                             failureDetector,
                                                             slopStoreFactory);
@@ -157,7 +157,7 @@ public class HintedHandoffTest {
         RoutingStrategy routingStrategy = routingStrategyFactory.updateRoutingStrategy(storeDef,
                                                                                        cluster);
 
-        while (keysToNodes.keySet().size() < NUM_NODES) {
+        while (keysToNodes.values().size() < NUM_NODES) {
             ByteArray randomKey = new ByteArray(TestUtils.randomBytes(KEY_LENGTH));
             byte[] randomValue = TestUtils.randomBytes(VALUE_LENGTH);
 
@@ -240,9 +240,9 @@ public class HintedHandoffTest {
 
         FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig();
         failureDetectorConfig.setImplementationClassName(failureDetectorClass.getName());
-        failureDetectorConfig.setBannagePeriod(9);
-        failureDetectorConfig.setRequestLengthThreshold(3);
-        failureDetectorConfig.setAsyncRecoveryInterval(3);
+        failureDetectorConfig.setBannagePeriod(30);
+        failureDetectorConfig.setRequestLengthThreshold(10);
+        failureDetectorConfig.setAsyncRecoveryInterval(10);
         failureDetectorConfig.setNodes(cluster.getNodes());
         failureDetectorConfig.setStoreVerifier(MutableStoreVerifier.create(subStores));
 
@@ -256,24 +256,24 @@ public class HintedHandoffTest {
         RoutedStore routedStore = routedStoreFactory.create(cluster,
                                                             storeDef,
                                                             subStores,
-                                                            true,
+                                                            false,
                                                             true,
                                                             failureDetector,
                                                             slopStoreFactory);
 
-        Multimap<ByteArray,Integer> keysToNodes = HashMultimap.create();
+        Set<Integer> nodesCovered = Sets.newHashSet();
         Map<ByteArray, ByteArray> keyValues = Maps.newHashMap();
 
         RoutingStrategyFactory routingStrategyFactory = new RoutingStrategyFactory();
         RoutingStrategy routingStrategy = routingStrategyFactory.updateRoutingStrategy(storeDef,
                                                                                        cluster);
 
-        while (keysToNodes.keySet().size() < NUM_NODES) {
+        while (nodesCovered.size() < NUM_NODES) {
             ByteArray randomKey = new ByteArray(TestUtils.randomBytes(KEY_LENGTH));
             byte[] randomValue = TestUtils.randomBytes(VALUE_LENGTH);
 
             for (Node node: routingStrategy.routeRequest(randomKey.get()))
-                keysToNodes.put(randomKey, node.getId());
+                nodesCovered.add(node.getId());
 
             keyValues.put(randomKey, new ByteArray(randomValue));
         }
@@ -291,43 +291,12 @@ public class HintedHandoffTest {
             logger.info("Started failing requests to " + nodeId);
         }
 
-        Set<ByteArray> failedKeys = Sets.newHashSet();
-        for (ByteArray key: keysToNodes.keySet()) {
-            Iterable<Integer> nodeIds = keysToNodes.get(key);
-
-            for (int n = 0; n < R_WRITES; n++) {
-                int nodeId = Iterables.get(nodeIds, n);
-                if (failedNodes.contains(nodeId)) {
-                    failedKeys.add(key);
-                    break;
-                }
-            }
-
+        for (ByteArray key: keyValues.keySet()) {
             try {
                 Versioned<byte[]> versioned = new Versioned<byte[]>(keyValues.get(key).get());
                 routedStore.put(key, versioned);
             } catch (Exception e) {
                 logger.trace(e, e);
-            }
-
-        }
-
-        Map<ByteArray, byte[]> dataInSlops = Maps.newHashMap();
-        Set<ByteArray> slopKeys = Sets.newHashSet();
-
-        byte[] opCode = new byte[] { Slop.Operation.PUT.getOpCode() };
-        byte[] spacer = new byte[] { (byte) 0 };
-        byte[] storeName = ByteUtils.getBytes(STORE_NAME, "UTF-8");
-
-        for (ByteArray key: failedKeys)
-            slopKeys.add(new ByteArray(ByteUtils.cat(opCode, spacer, storeName, spacer, key.get())));
-
-        for (Store<ByteArray, Slop> slopStore: slopStores.values()) {
-            Map<ByteArray, List<Versioned<Slop>>> res = slopStore.getAll(slopKeys);
-            for (Map.Entry<ByteArray, List<Versioned<Slop>>> entry: res.entrySet()) {
-                Slop slop = entry.getValue().get(0).getValue();
-                dataInSlops.put(slop.getKey(), slop.getValue());
-                logger.trace(slop);
             }
         }
 
@@ -349,15 +318,13 @@ public class HintedHandoffTest {
 
         pusherThreadPool.shutdown();
         pusherThreadPool.awaitTermination(5, TimeUnit.SECONDS);
-
-        Thread.sleep(1250);
         
-        for (Map.Entry<ByteArray, ByteArray> entry: keyValues.entrySet()) {
-            List<Versioned<byte[]>> versionedValues = routedStore.get(entry.getKey());
+        for (ByteArray key: keyValues.keySet()) {
+            List<Versioned<byte[]>> versionedValues = routedStore.get(key);
 
-            assertTrue("slop entry pushed for " + entry.getKey(), versionedValues.size() > 0);
-            assertEquals("slop entry correct for " + entry.getKey(),
-                         entry.getValue(),
+            assertTrue("slop entry pushed for " + key, versionedValues.size() > 0);
+            assertEquals("slop entry correct for " + key,
+                         keyValues.get(key),
                          new ByteArray(versionedValues.get(0).getValue()));
         }
     }

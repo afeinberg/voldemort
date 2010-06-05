@@ -101,9 +101,6 @@ public class PerformSerialPutRequests extends
                 break;
             } catch(Exception e) {
                 long requestTime = (System.nanoTime() - start) / Time.NS_PER_MS;
-
-                pipelineData.addFailedNode(node.getId());
-                
                 if(handleResponseError(e, node, requestTime, pipeline, failureDetector))
                     return;
             }
@@ -115,7 +112,7 @@ public class PerformSerialPutRequests extends
                                                                                  failures.size() > 0 ? failures.get(0)
                                                                                                     : null));
             if (pipelineData.isHintedHandoffEnabled())
-                pipeline.addEvent(Event.PUT_ABORTED);
+                pipeline.addEvent(Event.ABORTED);
             else
                 pipeline.addEvent(Event.ERROR);
 
@@ -136,7 +133,7 @@ public class PerformSerialPutRequests extends
                                                                                              + " succeeded",
                                                                                      pipelineData.getFailures()));
                 if (pipelineData.isHintedHandoffEnabled())
-                    pipeline.addEvent(Event.PUT_ABORTED);
+                    pipeline.addEvent(Event.ABORTED);
                 else
                     pipeline.addEvent(Event.ERROR);
             } else {

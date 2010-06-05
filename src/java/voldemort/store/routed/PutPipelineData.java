@@ -36,22 +36,19 @@ public class PutPipelineData extends BasicPipelineData<Void> {
 
     private Versioned<byte[]> versionedCopy;
 
-    private final boolean enableHintedHandoff;
-
-    private final Set<Integer> failedNodes = Sets.newHashSet();
-
     private final String storeName;
     
     /**
      * Creates pipeline data for a put operation.
      *
      * @param enableHintedHandoff Enable hinted handoff
+     * @param storeName Store name
      */
     
     public PutPipelineData(boolean enableHintedHandoff, String storeName) {
         super();
-        this.enableHintedHandoff = enableHintedHandoff;
         this.storeName = storeName;
+        setEnableHintedHandoff(enableHintedHandoff);
     }
 
     /**
@@ -100,35 +97,11 @@ public class PutPipelineData extends BasicPipelineData<Void> {
     }
 
     /**
-     * Registers the node if of a failed node. Used by {@link PerformHintedHandoff}.
-     *
-     * @param nodeId
-     */
-
-    public void addFailedNode(int nodeId) {
-        failedNodes.add(nodeId);
-    }
-
-    /**
-     * List all the failed nodes.
-     *
-     * @return Ids of failed nodes
-     */
-
-    public Collection<Integer> getFailedNodes() {
-        return failedNodes;
-    }
-
-    /**
      * Is hinted handoff enabled?
      *
      * @return True if hinted handoff is enabled
      */
     
-    public boolean isHintedHandoffEnabled() {
-        return enableHintedHandoff;
-    }
-
     public String getStoreName() {
         return storeName;
     }

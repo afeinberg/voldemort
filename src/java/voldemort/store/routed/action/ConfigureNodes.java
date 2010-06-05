@@ -18,17 +18,13 @@ package voldemort.store.routed.action;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 import voldemort.VoldemortException;
-import voldemort.annotations.concurrency.Immutable;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.routing.RoutingStrategy;
-import voldemort.store.InsufficientOperationalNodesException;
 import voldemort.store.routed.BasicPipelineData;
 import voldemort.store.routed.Pipeline;
 import voldemort.store.routed.Pipeline.Event;
-import voldemort.store.routed.PutPipelineData;
 import voldemort.utils.ByteArray;
 
 public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
@@ -51,27 +47,11 @@ public class ConfigureNodes<V, PD extends BasicPipelineData<V>> extends
 
         try {
             nodes = getNodes(key);
-        } catch (InsufficientOperationalNodesException ie) {
-            pipelineData.setFatalError(ie);
-            if (pipelineData instanceof PutPipelineData) {
-                PutPipelineData ppd = (PutPipelineData) pipelineData;
-                if (ppd.isHintedHandoffEnabled())
-                    pipeline.addEvent(Event.PUT_ABORTED);
-                else
-                    pipeline.addEvent(Event.ERROR);
-            } else
-                pipeline.addEvent(Event.ERROR);
-
-            return;
-        } catch(VoldemortException e) {
+        } catch (VoldemortException e) {
             pipelineData.setFatalError(e);
-            if (pipelineData instanceof PutPipelineData) {
-                PutPipelineData ppd = (PutPipelineData) pipelineData;
-                if (ppd.isHintedHandoffEnabled())
-                    pipeline.addEvent(Event.PUT_ABORTED);
-                else
-                    pipeline.addEvent(Event.ERROR);
-            } else
+            if (pipelineData.isHintedHandoffEnabled())
+                pipeline.addEvent(Event.ABORTED);
+            else
                 pipeline.addEvent(Event.ERROR);
 
             return;

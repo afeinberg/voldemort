@@ -55,13 +55,8 @@ public abstract class AbstractConfigureNodes<K, V, PD extends PipelineData<K, V>
         for(Node node: routingStrategy.routeRequest(key.get())) {
             if(failureDetector.isAvailable(node))
                 nodes.add(node);
-            else {
-                if (pipelineData instanceof PutPipelineData) {
-                    PutPipelineData ppd = (PutPipelineData) pipelineData;
-                    if (ppd.isHintedHandoffEnabled())
-                        ppd.addFailedNode(node.getId());
-                }
-            }
+            else
+                pipelineData.addFailedNode(node);
         }
 
         if(nodes.size() < required)

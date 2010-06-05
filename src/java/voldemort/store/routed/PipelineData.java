@@ -17,9 +17,11 @@
 package voldemort.store.routed;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import voldemort.VoldemortException;
+import voldemort.cluster.Node;
 
 /**
  * PipelineData includes a common set of data that is used to represent the
@@ -62,11 +64,16 @@ public abstract class PipelineData<K, V> {
 
     protected final List<Exception> failures;
 
+    private final List<Node> failedNodes;
+
     protected VoldemortException fatalError;
+
+    private boolean enableHintedHandoff = false;
 
     public PipelineData() {
         this.responses = new ArrayList<Response<K, V>>();
         this.failures = new ArrayList<Exception>();
+        this.failedNodes = new ArrayList<Node>();
     }
 
     /**
@@ -122,6 +129,26 @@ public abstract class PipelineData<K, V> {
 
     public void recordFailure(Exception e) {
         this.failures.add(e);
+    }
+
+    public boolean isHintedHandoffEnabled() {
+        return enableHintedHandoff;
+    }
+
+    public void setEnableHintedHandoff(boolean enableHintedHandoff) {
+        this.enableHintedHandoff = enableHintedHandoff;
+    }
+
+    public void addFailedNode(Node node) {
+        failedNodes.add(node);
+    }
+
+    public void addFailedNodes(Collection<Node> nodes) {
+        failedNodes.addAll(nodes);
+    }
+
+    public List<Node> getFailedNodes() {
+        return failedNodes;
     }
 
 }
