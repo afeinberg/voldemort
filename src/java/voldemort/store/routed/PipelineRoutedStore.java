@@ -270,6 +270,7 @@ public class PipelineRoutedStore extends RoutedStore {
         return results;
     }
 
+    // TODO: implement hinted handoff support for deletes
     public boolean delete(final ByteArray key, final Version version) throws VoldemortException {
         StoreUtils.assertValidKey(key);
 
@@ -390,12 +391,11 @@ public class PipelineRoutedStore extends RoutedStore {
                                                                                versioned,
                                                                                time));
 
-        } else {
+        } else
             pipeline.addEventAction(Event.RESPONSES_RECEIVED, new IncrementClock(pipelineData,
                                                                                  Event.COMPLETED,
                                                                                  versioned,
                                                                                  time));
-        }
 
         pipeline.addEvent(Event.STARTED);
         pipeline.execute();

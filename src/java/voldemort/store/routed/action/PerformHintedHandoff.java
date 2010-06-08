@@ -78,7 +78,7 @@ public class PerformHintedHandoff extends
             if (logger.isTraceEnabled())
                 logger.trace("Performing hinted handoff for node " + failedNode
                              + ", store. " + pipelineData.getStoreName() + " key "
-                             + key + ", value " + versionedCopy);
+                             + key + ", version " + versionedCopy.getVersion());
             
             Slop slop = new Slop(pipelineData.getStoreName(),
                                  Slop.Operation.PUT,
@@ -97,7 +97,8 @@ public class PerformHintedHandoff extends
                     long start = System.nanoTime();
                     try {
                         if (logger.isTraceEnabled())
-                            logger.trace("Writing slop " + slop.getKey() + " for " + slop.getNodeId());
+                            logger.trace("Attempting to write " + slop.getKey() + " for "
+                                         + failedNode + " to " + slopNode);
 
                         slopStore.put(slop.makeKey(),
                                       new Versioned<Slop>(slop, versionedCopy.getVersion()));

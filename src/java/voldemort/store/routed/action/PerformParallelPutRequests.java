@@ -127,6 +127,7 @@ public class PerformParallelPutRequests extends
         }
 
         if(pipelineData.getSuccesses() < required) {
+            // TODO: decide on semantics of performing HH with timeouts
             pipelineData.setFatalError(new InsufficientOperationalNodesException(required
                                                                                          + " "
                                                                                          + pipeline.getOperation()
