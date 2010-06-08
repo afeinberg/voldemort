@@ -35,8 +35,6 @@ public class MockSlopStoreFactory implements SlopStoreFactory {
         return new MockSlopStoreFactory(slopStores);
     }
 
-
-
     public Store<ByteArray, Slop> create(int node) {
         return underlyingStores.get(node);
     }

@@ -68,8 +68,9 @@ public abstract class AbstractAction<K, V, PD extends PipelineData<K, V>> implem
         } else if(e instanceof VoldemortApplicationException) {
             pipelineData.setFatalError((VoldemortApplicationException) e);
             if (pipelineData.isHintedHandoffEnabled())
-                    pipeline.addEvent(Event.ABORTED);
-            pipeline.addEvent(Event.ERROR);
+                pipeline.addEvent(Event.ABORTED);
+            else
+                pipeline.addEvent(Event.ERROR);
 
             if(logger.isEnabledFor(Level.WARN))
                 logger.warn("Error is fatal - aborting further pipeline processing");

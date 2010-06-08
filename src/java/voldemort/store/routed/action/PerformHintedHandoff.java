@@ -15,6 +15,8 @@ import voldemort.store.routed.PutPipelineData;
 import voldemort.store.slop.Slop;
 import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
+import voldemort.utils.Time;
+import voldemort.versioning.VectorClock;
 import voldemort.versioning.Versioned;
 
 import java.util.*;
@@ -32,18 +34,22 @@ public class PerformHintedHandoff extends
 
     private final Random random = new Random();
 
+    private final Time time;
+
     public PerformHintedHandoff(PutPipelineData pipelineData,
                                 Pipeline.Event completeEvent,
                                 ByteArray key,
                                 Versioned<byte[]> versioned,
                                 FailureDetector failureDetector,
                                 SlopStoreFactory slopStoreFactory,
-                                Cluster cluster) {
+                                Cluster cluster,
+                                Time time) {
         super(pipelineData, completeEvent, key);
         this.failureDetector = failureDetector;
         this.slopStoreFactory = slopStoreFactory;
         this.cluster = cluster;
         this.versioned = versioned;
+        this.time = time;
     }
     
     public void execute(Pipeline pipeline) {
@@ -59,14 +65,18 @@ public class PerformHintedHandoff extends
             }
         }
 
-        for (Node node: pipelineData.getFailedNodes()) {
-            Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
-            if (versionedCopy == null || versionedCopy.getValue() == null)
-                versionedCopy = versioned;
-            int nodeId = node.getId();
+        Versioned<byte[]> versionedCopy = pipelineData.getVersionedCopy();
+        for (Node failedNode: pipelineData.getFailedNodes()) {
+            int failedNodeId = failedNode.getId();
+            if (versionedCopy == null) {
+                VectorClock versionedClock = (VectorClock) versioned.getVersion();
+                versionedCopy = new Versioned<byte[]>(versioned.getValue(),
+                                                      versionedClock.incremented(failedNodeId,
+                                                                                 time.getMilliseconds()));
+            }
 
             if (logger.isTraceEnabled())
-                logger.trace("Performing hinted handoff for node " + node
+                logger.trace("Performing hinted handoff for node " + failedNode
                              + ", store. " + pipelineData.getStoreName() + " key "
                              + key + ", value " + versionedCopy);
             
@@ -74,36 +84,34 @@ public class PerformHintedHandoff extends
                                  Slop.Operation.PUT,
                                  key,
                                  versionedCopy.getValue(),
-                                 nodeId,
+                                 failedNodeId,
                                  new Date());
 
             Set<Node> used = Sets.newHashSetWithExpectedSize(pipelineNodes.size());
             boolean persisted = false;
             for (Node slopNode: pipelineNodes) {
                 int slopNodeId = slopNode.getId();
-                Store<ByteArray,Slop> slopStore = slopStores.get(slopNodeId);
+                Store<ByteArray, Slop> slopStore = slopStores.get(slopNodeId);
 
-                if (slopNodeId != nodeId && failureDetector.isAvailable(slopNode)) {
-                    long start = System.currentTimeMillis();
+                if (slopNodeId != failedNodeId && failureDetector.isAvailable(slopNode)) {
+                    long start = System.nanoTime();
                     try {
-
                         if (logger.isTraceEnabled())
-                            logger.trace("Writing slop " + slop);
+                            logger.trace("Writing slop " + slop.getKey() + " for " + slop.getNodeId());
 
                         slopStore.put(slop.makeKey(),
                                       new Versioned<Slop>(slop, versionedCopy.getVersion()));
                         persisted = true;
+                        failureDetector.recordSuccess(slopNode, (System.nanoTime() - start) / Time.NS_PER_MS);
                         used.add(slopNode);
 
-                        failureDetector.recordSuccess(slopNode, System.currentTimeMillis() - start);
-
                         if (logger.isTraceEnabled())
-                            logger.trace("Finished hinted handoff for " + node
+                            logger.trace("Finished hinted handoff for " + failedNode
                                          + " writing slop to " + slopNode);
                         
                         break;
                     } catch (UnreachableStoreException e) {
-                        failureDetector.recordException(slopNode, System.currentTimeMillis() - start, e);
+                        failureDetector.recordException(slopNode, (System.nanoTime() - start) / Time.NS_PER_MS, e);
                         logger.warn("Error during hinted handoff ", e);
                     } catch (VoldemortException e) {
                         logger.error("Unexpected " + e + " during hinted handoff ", e);
@@ -120,13 +128,12 @@ public class PerformHintedHandoff extends
             if (e != null) {
                 if (persisted)
                     pipelineData.setFatalError(new UnreachableStoreException("Put operation failed on node "
-                                                                             + nodeId
+                                                                             + failedNodeId
                                                                              + ", but has been persisted to slop storage for eventual replication.",
                                                                              e));
                 else
-                    pipelineData.setFatalError(new InsufficientOperationalNodesException("All slop servers are unavailable from node " + nodeId + ".", e));
+                    pipelineData.setFatalError(new InsufficientOperationalNodesException("All slop servers are unavailable from node " + failedNodeId + ".", e));
             }
-
         }
         
         pipeline.addEvent(completeEvent);

@@ -21,13 +21,20 @@ public class ForceFailStore<K, V> extends DelegatingStore<K, V> {
     private volatile boolean failGetVersions = false;
     private volatile boolean failAll = false;
 
+    private final int magic;
+
     public ForceFailStore(Store<K, V> innerStore) {
         this(innerStore, new VoldemortException("Operation failed!"));
     }
 
     public ForceFailStore(Store<K, V> innerStore, VoldemortException e) {
+        this(innerStore, e, -1);
+    }
+
+    public ForceFailStore(Store<K, V> innerStore, VoldemortException e, int magic) {
         super(innerStore);
         this.exception = e;
+        this.magic = magic;
     }
 
     @Override
@@ -92,5 +99,9 @@ public class ForceFailStore<K, V> extends DelegatingStore<K, V> {
 
     public void setFailAll(boolean failAll) {
         this.failAll = failAll;
+    }
+
+    public int getMagic() {
+        return magic;
     }
 }
