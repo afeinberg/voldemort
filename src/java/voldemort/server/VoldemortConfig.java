@@ -57,7 +57,8 @@ public class VoldemortConfig implements Serializable {
     private String metadataDirectory;
 
     private String slopStoreType;
-
+    private int slopFrequencyMs;
+    
     private long bdbCacheSize;
     private boolean bdbWriteTransactions;
     private boolean bdbFlushTransactions;
@@ -156,6 +157,7 @@ public class VoldemortConfig implements Serializable {
     private volatile List<String> failureDetectorCatastrophicErrorTypes;
     private long failureDetectorRequestLengthThreshold;
 
+
     private int retentionCleanupFirstStartTimeInHour;
     private int retentionCleanupScheduledPeriodInHour;
 
@@ -205,7 +207,7 @@ public class VoldemortConfig implements Serializable {
                                                                              + "read-only");
 
         this.slopStoreType = props.getString("slop.store.engine", BdbStorageConfiguration.TYPE_NAME);
-
+        this.slopFrequencyMs = props.getInt("slop.frequency.ms", 5 * 60 * 1000);
         this.mysqlUsername = props.getString("mysql.user", "root");
         this.mysqlPassword = props.getString("mysql.password", "");
         this.mysqlHost = props.getString("mysql.host", "localhost");
@@ -716,6 +718,14 @@ public class VoldemortConfig implements Serializable {
         this.slopStoreType = slopStoreType;
     }
 
+    public int getSlopFrequencyMs() {
+        return this.slopFrequencyMs;
+    }
+
+    public void setSlopFrequencyMs(int slopFrequencyMs) {
+        this.slopFrequencyMs = slopFrequencyMs;
+    }
+    
     public int getSocketTimeoutMs() {
         return this.socketTimeoutMs;
     }

@@ -46,6 +46,7 @@ import voldemort.store.metadata.MetadataStore;
 import voldemort.store.nonblockingstore.NonblockingStore;
 import voldemort.store.routed.RoutedStoreFactory;
 import voldemort.store.serialized.SerializingStore;
+import voldemort.store.slop.SlopStoreFactory;
 import voldemort.store.stats.StatTrackingStore;
 import voldemort.store.stats.StoreStats;
 import voldemort.store.stats.StoreStatsJmx;
@@ -78,7 +79,7 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
     private static final StoreDefinitionsMapper storeMapper = new StoreDefinitionsMapper();
     protected static final Logger logger = Logger.getLogger(AbstractStoreClientFactory.class);
 
-    private final URI[] bootstrapUrls;
+    protected final URI[] bootstrapUrls;
     private final ExecutorService threadPool;
     private final SerializerFactory serializerFactory;
     private final boolean isJmxEnabled;
@@ -87,8 +88,9 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
     protected volatile FailureDetector failureDetector;
     private final int maxBootstrapRetries;
     private final StoreStats stats;
-    private final ClientConfig config;
+    protected final ClientConfig config;
     private final RoutedStoreFactory routedStoreFactory;
+    protected volatile SlopStoreFactory slopStoreFactory;
 
     public AbstractStoreClientFactory(ClientConfig config) {
         this.config = config;
@@ -165,7 +167,9 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
                                                                    clientMapping,
                                                                    nonblockingStores,
                                                                    repairReads,
-                                                                   getFailureDetector());
+                                                                   config.isHintedHandoffEnabled(),
+                                                                   getFailureDetector(),
+                                                                   slopStoreFactory);
 
         if(isJmxEnabled) {
             StatTrackingStore statStore = new StatTrackingStore(store, this.stats);

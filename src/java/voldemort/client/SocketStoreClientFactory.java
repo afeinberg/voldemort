@@ -18,11 +18,13 @@ package voldemort.client;
 
 import static voldemort.cluster.failuredetector.FailureDetectorUtils.create;
 
+import java.io.StringReader;
 import java.net.URI;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import voldemort.client.protocol.RequestFormatType;
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.ClientStoreVerifier;
 import voldemort.cluster.failuredetector.FailureDetector;
@@ -31,6 +33,8 @@ import voldemort.cluster.failuredetector.FailureDetectorListener;
 import voldemort.server.RequestRoutingType;
 import voldemort.store.Store;
 import voldemort.store.metadata.MetadataStore;
+import voldemort.store.slop.SlopStoreFactory;
+import voldemort.store.slop.SocketSlopStoreFactory;
 import voldemort.store.socket.SocketDestination;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
@@ -66,6 +70,13 @@ public class SocketStoreClientFactory extends AbstractStoreClientFactory {
                                                           config.getSocketKeepAlive());
         if(config.isJmxEnabled())
             JmxUtils.registerMbean(storeFactory, JmxUtils.createObjectName(storeFactory.getClass()));
+
+        if (config.isHintedHandoffEnabled()) {
+            if (config.isPipelineRoutedStoreEnabled())
+                initSlopStoreFactory();
+            else
+                logger.warn("PipelinedRoutedStore must be enabled for Hinted Handoff to work");
+        }
     }
 
     @Override
@@ -74,6 +85,17 @@ public class SocketStoreClientFactory extends AbstractStoreClientFactory {
                                                 int port,
                                                 RequestFormatType type) {
         return storeFactory.create(storeName, host, port, type, requestRoutingType);
+    }
+
+    protected SlopStoreFactory initSlopStoreFactory() {
+        String clusterXml = bootstrapMetadataWithRetries(MetadataStore.CLUSTER_KEY, bootstrapUrls);
+        Cluster cluster = clusterMapper.readCluster(new StringReader(clusterXml));
+        slopStoreFactory = new SocketSlopStoreFactory(storeFactory,
+                                                      config.getRequestFormatType(),
+                                                      cluster,
+                                                      "slop");
+
+        return slopStoreFactory;
     }
 
     @Override
