@@ -34,6 +34,7 @@ import org.apache.commons.httpclient.params.HttpMethodParams;
 
 import voldemort.client.protocol.RequestFormatFactory;
 import voldemort.client.protocol.RequestFormatType;
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.ClientStoreVerifier;
 import voldemort.cluster.failuredetector.FailureDetector;
@@ -41,6 +42,8 @@ import voldemort.cluster.failuredetector.FailureDetectorConfig;
 import voldemort.store.Store;
 import voldemort.store.http.HttpStore;
 import voldemort.store.metadata.MetadataStore;
+import voldemort.store.slop.HttpSlopStoreFactory;
+import voldemort.store.slop.SlopStoreFactory;
 import voldemort.utils.ByteArray;
 
 /**
@@ -117,6 +120,14 @@ public class HttpStoreClientFactory extends AbstractStoreClientFactory {
                                                                                        .setStoreVerifier(storeVerifier);
 
         return create(failureDetectorConfig, config.isJmxEnabled());
+    }
+
+    @Override
+    protected SlopStoreFactory initSlopStoreFactory(Cluster cluster) {
+        return new HttpSlopStoreFactory(httpClient,
+                                        config.getRequestFormatType(),
+                                        cluster,
+                                        "slop");
     }
 
     @Override

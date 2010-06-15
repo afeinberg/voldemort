@@ -87,15 +87,13 @@ public class SocketStoreClientFactory extends AbstractStoreClientFactory {
         return storeFactory.create(storeName, host, port, type, requestRoutingType);
     }
 
-    protected SlopStoreFactory initSlopStoreFactory() {
-        String clusterXml = bootstrapMetadataWithRetries(MetadataStore.CLUSTER_KEY, bootstrapUrls);
-        Cluster cluster = clusterMapper.readCluster(new StringReader(clusterXml));
-        slopStoreFactory = new SocketSlopStoreFactory(storeFactory,
-                                                      config.getRequestFormatType(),
-                                                      cluster,
-                                                      "slop");
-
-        return slopStoreFactory;
+    
+    @Override
+    protected SlopStoreFactory initSlopStoreFactory(Cluster cluster) {
+        return new SocketSlopStoreFactory(storeFactory,
+                                          config.getRequestFormatType(),
+                                          cluster,
+                                          "slop");
     }
 
     @Override

@@ -79,7 +79,7 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
     private static final StoreDefinitionsMapper storeMapper = new StoreDefinitionsMapper();
     protected static final Logger logger = Logger.getLogger(AbstractStoreClientFactory.class);
 
-    protected final URI[] bootstrapUrls;
+    private final URI[] bootstrapUrls;
     private final ExecutorService threadPool;
     private final SerializerFactory serializerFactory;
     private final boolean isJmxEnabled;
@@ -313,6 +313,14 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
     public SerializerFactory getSerializerFactory() {
         return serializerFactory;
     }
+
+    protected void initSlopStoreFactory() {
+        String clusterXml = bootstrapMetadataWithRetries(MetadataStore.CLUSTER_KEY, bootstrapUrls);
+        Cluster cluster = clusterMapper.readCluster(new StringReader(clusterXml));
+        slopStoreFactory = initSlopStoreFactory(cluster);
+    }
+
+    abstract protected SlopStoreFactory initSlopStoreFactory(Cluster cluster);
 
     public void close() {
         this.threadPool.shutdown();
