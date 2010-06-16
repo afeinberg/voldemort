@@ -1,6 +1,11 @@
 package voldemort.store.routed;
 
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
@@ -14,7 +19,11 @@ import voldemort.TestUtils;
 import voldemort.VoldemortException;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
-import voldemort.cluster.failuredetector.*;
+import voldemort.cluster.failuredetector.BannagePeriodFailureDetector;
+import voldemort.cluster.failuredetector.FailureDetector;
+import voldemort.cluster.failuredetector.FailureDetectorConfig;
+import voldemort.cluster.failuredetector.FailureDetectorUtils;
+import voldemort.cluster.failuredetector.ThresholdFailureDetector;
 import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyFactory;
 import voldemort.routing.RoutingStrategyType;
@@ -29,8 +38,17 @@ import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
 import voldemort.versioning.Versioned;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 import static voldemort.VoldemortTestConstants.*;
 import static org.junit.Assert.*;
@@ -73,7 +91,7 @@ public class HintedHandoffTest {
     public static Collection<Object[]> configs() {
         return Arrays.asList(new Object[][] {
                        { BannagePeriodFailureDetector.class } ,
-                       { ThresholdFailureDetector.class } 
+                       { ThresholdFailureDetector.class }
         });
     }
 
