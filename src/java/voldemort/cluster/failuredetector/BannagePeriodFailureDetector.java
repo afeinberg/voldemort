@@ -88,6 +88,8 @@ public class BannagePeriodFailureDetector extends AbstractFailureDetector {
         setUnavailable(node, e);
     }
 
+    public void init() {}
+
     public void recordSuccess(Node node, long requestTime) {
         checkArgs(node, requestTime);
         setAvailable(node);

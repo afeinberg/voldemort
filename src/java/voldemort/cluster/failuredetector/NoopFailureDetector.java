@@ -59,4 +59,6 @@ public class NoopFailureDetector implements FailureDetector {
 
     public void destroy() {}
 
+    public void init() {}
+
 }

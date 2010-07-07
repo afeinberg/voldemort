@@ -43,6 +43,8 @@ public class FailureDetectorUtils {
         if(registerMbean)
             JmxUtils.registerMbean(failureDetector.getClass().getSimpleName(), failureDetector);
 
+        failureDetector.init();
+
         return failureDetector;
     }
 

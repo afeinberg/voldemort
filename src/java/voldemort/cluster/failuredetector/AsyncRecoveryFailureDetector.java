@@ -43,15 +43,17 @@ public class AsyncRecoveryFailureDetector extends AbstractFailureDetector implem
      * Thread that checks availability of the nodes in the unavailableNodes set.
      */
 
-    private final Thread recoveryThread;
+    private volatile Thread recoveryThread;
 
     private volatile boolean isRunning;
 
     public AsyncRecoveryFailureDetector(FailureDetectorConfig failureDetectorConfig) {
         super(failureDetectorConfig);
+    }
 
+    public void init() {
         isRunning = true;
-
+        
         recoveryThread = new Thread(this, "AsyncNodeRecoverer");
         recoveryThread.setDaemon(true);
         recoveryThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {

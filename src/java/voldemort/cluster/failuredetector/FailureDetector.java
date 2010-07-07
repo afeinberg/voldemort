@@ -235,11 +235,22 @@ public interface FailureDetector {
      * 
      * <p/>
      * 
-     * <b>Note for implementors</b>: After this method is called it is assumed
+     * <b>Note for implementers</b>: After this method is called it is assumed
      * that attempts to call the other methods will either silently fail, throw
      * errors, or return stale information.
      */
 
     public void destroy();
+
+    /**
+     * Initialize the failure detector.
+     *
+     * <p/>
+     *
+     * <b>Note for implementers</b>: Implement this method if you intend to
+     * create any threads within the failure detector. If you override this method
+     * when extending {@link AsyncRecoveryFailureDetector} make sure to use super.
+     */
+    public void init();
 
 }
