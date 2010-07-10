@@ -9,7 +9,7 @@
     <packaging>jar</packaging>
     <!-- normally I would make this a property but the property variables do not change in the system path -->
     <!-- make sure you change the other ones below too -->
-    <version>0.80.1</version>
+    <version>0.81</version>
 
     <build>
         <defaultGoal>install</defaultGoal>
@@ -143,7 +143,7 @@
         
     </dependencies>
     <properties>
-        <voldemort.version>0.80.1</voldemort.version>
+        <voldemort.version>0.81</voldemort.version>
     </properties>
 
 
