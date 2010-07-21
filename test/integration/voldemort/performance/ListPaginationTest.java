@@ -182,6 +182,9 @@ public class ListPaginationTest {
         parser.accepts("m", "execute a mix of read and write requests");
         parser.accepts("v", "verbose");
         parser.accepts("ignore-nulls", "ignore null values");
+        parser.accepts("paginate", "paginate these many messages at once. Default = disabled")
+                       .withRequiredArg()
+                       .ofType(Integer.class);
         parser.accepts("request-file", "execute specific requests in order").withRequiredArg();
         parser.accepts("value-size", "size in bytes for random value. Default = 1024")
                        .withRequiredArg()
@@ -218,6 +221,7 @@ public class ListPaginationTest {
 
         final Integer interval = CmdUtils.valueOf(options, "interval", 1000);
         final boolean verbose = options.has("v");
+        final Integer paginate = CmdUtils.valueOf(options, "paginate", 0);
 
         if (options.has("request-file"))
             primaryKeys = loadKeys((String) options.valueOf("request-file"));
@@ -317,22 +321,35 @@ public class ListPaginationTest {
                                 Versioned<List<Long>> v = indexStore.get(primaryKey);
                                 if (v != null) {
                                     List<Long> messageIds = v.getValue();
-                                    Map<Long, Versioned<String>> results = messageStore.getAll(messageIds);
+                                    if (paginate > 0) {
+                                        for (int i = 0; i < messageIds.size(); i += paginate) {
+                                            List<Long> paginateSubset = messageIds.subList(i,
+                                                                                           Math.min(messageIds.size(), 
+                                                                                                    i + paginate));
+                                            Map<Long, Versioned<String>> results = messageStore.getAll(paginateSubset);
+                                            long requestTime = (System.nanoTime() - startNs) / Time.NS_PER_MS;
+                                            requestTimes[j] = requestTime;
+                                            numReads.incrementAndGet();
+                                            startNs = System.nanoTime();
+                                        }
+                                    } else {
+                                        Map<Long, Versioned<String>> results =
+                                                       messageStore.getAll(messageIds);
+                                        long requestTime =  (System.nanoTime() - startNs) / Time.NS_PER_MS;
+                                        requestTimes[j] = requestTime;
+                                        numReads.incrementAndGet();
+                                    }
                                 } else {
                                     numNulls.incrementAndGet();
                                 }
-                                long requestTime =  (System.nanoTime() - startNs) / Time.NS_PER_MS;
-                                synchronized(requestTimes) {
-                                    requestTimes[j] = requestTime;
-                                }
-                                numReads.incrementAndGet();
+
                             } catch (Exception e) {
                                 if (verbose)
                                     e.printStackTrace();
                             } finally {
                                 latch.countDown();
                                 if (interval != 0 && j % interval == 0) {
-                                    printStatistics("reads", j, start, requestTimes);
+                                    printStatistics("reads", numReads.get(), start, requestTimes);
                                     printNulls(numNulls.get(), start);
                                 }
                             }
