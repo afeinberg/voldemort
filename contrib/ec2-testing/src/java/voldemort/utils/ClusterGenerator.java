@@ -169,7 +169,10 @@ public class ClusterGenerator {
             numHosts += hostNames.size();
         }
 
-        if(cluster.getNumberOfNodes() != numHosts)
+        System.err.println(cluster);
+        System.err.println("numHosts = " + numHosts);
+        
+        if(cluster.getNumberOfNodes() > numHosts)
             throw new IllegalStateException("cluster size exceeds the number of available instances");
 
         List<ClusterNodeDescriptor> list = new ArrayList<ClusterNodeDescriptor>();
@@ -178,7 +181,7 @@ public class ClusterGenerator {
         for(int zoneId = 0; zoneId < zoneToHostNames.size(); zoneId++) {
             List<String> hostNames = zoneToHostNames.get(zoneId);
 
-            for(int i = 0; i < hostNames.size(); i++) {
+            for(int i = 0; i < cluster.getNumberOfNodes(); i++) {
                 Node node = cluster.getNodeById(nodeId);
                 String hostName = hostNames.get(i);
                 List<Integer> partitions = node.getPartitionIds();
