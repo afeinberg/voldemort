@@ -182,13 +182,13 @@ public class RebalanceClusterPlan {
         // get changing replication mapping
         RebalanceClusterTool clusterTool = new RebalanceClusterTool(currentCluster,
                                                                     RebalanceUtils.getMaxReplicationStore(this.storeDefList));
-        Multimap<Integer, Pair<Integer, Integer>> replicationChanges = clusterTool.getRemappedReplicas(targetCluster);
+        Multimap<Integer, Pair<Integer, Integer>> replicationChanges = clusterTool.remappedReplicas(targetCluster);
 
         for(final Entry<Integer, Pair<Integer, Integer>> entry: replicationChanges.entries()) {
             int newReplicationPartition = entry.getValue().getSecond();
             if(targetList.contains(newReplicationPartition)) {
                 // stealerNode need to replicate some new partition now.
-                int donorNode = currentPartitionsToNodeMap.get(entry.getKey());
+                int donorNode = currentPartitionsToNodeMap.get(entry.getValue().getFirst());
                 if(donorNode != stealNodeId)
                     createAndAdd(replicationMapping, donorNode, entry.getKey());
             }

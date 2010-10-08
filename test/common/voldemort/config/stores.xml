@@ -1,6 +1,22 @@
 <?xml version="1.0"?>
 <stores>
   <store>
+    <name>many-users</name>
+    <persistence>bdb</persistence>
+    <routing>client</routing>
+    <replication-factor>2</replication-factor>
+    <required-reads>1</required-reads>
+    <required-writes>2</required-writes>
+    <key-serializer>
+      <type>string</type>
+      <schema-info>UTF-8</schema-info>
+    </key-serializer>
+    <value-serializer>
+      <type>java-serialization</type>
+    </value-serializer>
+  </store>
+
+  <store>
     <name>users</name>
     <persistence>bdb</persistence>
     <routing>client</routing>

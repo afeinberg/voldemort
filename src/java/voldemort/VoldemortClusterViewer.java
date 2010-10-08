@@ -79,7 +79,7 @@ public class VoldemortClusterViewer {
      */
     public void compareToCluster(Cluster target) {
         RebalanceClusterTool clusterTool = new RebalanceClusterTool(originalCluster, storeDefinition);
-        Multimap<Node,Integer> multipleCopies = clusterTool.getMultipleCopies(target);
+        Multimap<Node,Integer> multipleCopies = clusterTool.multipleCopies(target);
         if (multipleCopies.size() > 0) {
             for (Node n: multipleCopies.keySet()) {
                 System.out.println(n + " has multiple copies of data: " + Joiner.on(", ").join(multipleCopies.get(n)));
@@ -87,7 +87,7 @@ public class VoldemortClusterViewer {
         } else
             System.out.println("No multiple copies found.");
 
-        Multimap<Integer, Pair<Integer,Integer>> remappedReplicas = clusterTool.getRemappedReplicas(target);
+        Multimap<Integer, Pair<Integer,Integer>> remappedReplicas = clusterTool.remappedReplicas(target);
         System.out.println();
 
         if (remappedReplicas.size() > 0) {
