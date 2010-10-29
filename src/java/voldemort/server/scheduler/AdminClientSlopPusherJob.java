@@ -1,5 +1,6 @@
 package voldemort.server.scheduler;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import voldemort.client.protocol.admin.AdminClient;
@@ -77,8 +78,10 @@ public class AdminClientSlopPusherJob {
                         if(slopQueue == null) {
                             slopQueue = new SynchronousQueue<Pair<ByteArray, Versioned<Slop>>>();
                             slopQueues.put(nodeId, slopQueue);
+                            consumerExecutor.submit(new SlopConsumer(nodeId, slopQueue));
                         }
                         slopQueue.put(keyAndVal);
+                        readThrottler.maybeThrottle(nBytesRead(keyAndVal));
                     } catch(Exception e) {
                         logger.error("Exception in the entries, escaping the loop ", e);
                         break;
@@ -125,15 +128,62 @@ public class AdminClientSlopPusherJob {
         return nBytes;
     }
 
+    private class SlopIterator extends AbstractIterator<Pair<String, Pair<ByteArray, Versioned<byte[]>>>> {
+
+        private final SynchronousQueue<Pair<ByteArray, Versioned<Slop>>> slopQueue;
+        private volatile int writtenLast;
+
+        public SlopIterator(SynchronousQueue<Pair<ByteArray, Versioned<Slop>>> slopQueue) {
+            this.slopQueue = slopQueue;
+            writtenLast = 0;
+        }
+
+        @Override
+        protected Pair<String, Pair<ByteArray, Versioned<byte[]>>> computeNext() {
+            try {
+                Pair<ByteArray, Versioned<Slop>> head = null;
+                boolean shutDown = false;
+                while(!shutDown) {
+                    head = slopQueue.poll();
+
+                    if(head == null) {
+                        continue;
+                    }
+
+                    if(head.equals(END)) {
+                        shutDown = true;
+                    } else {
+                        writeThrottler.maybeThrottle(writtenLast);
+                        writtenLast = nBytesWritten(head);
+                        
+                        Versioned<Slop> slopVersioned = head.getSecond();
+                        Slop slop = slopVersioned.getValue();
+                        return Pair.create(slop.getStoreName(),
+                                           Pair.create(slop.getKey(),
+                                                       new Versioned<byte[]>(slop.getValue(),
+                                                                             slopVersioned.getVersion())));
+                    }
+                }
+                return endOfData();
+            } catch(Throwable t) {
+                throw new RuntimeException("consumer failed inside iterator", t);
+            }
+
+        }
+    }
+
     private class SlopConsumer implements Runnable {
 
         private final int nodeId;
+        private final SynchronousQueue<Pair<ByteArray, Versioned<Slop>>> slopQueue;
 
-        public SlopConsumer(int nodeId) {
+        public SlopConsumer(int nodeId,
+                            SynchronousQueue<Pair<ByteArray, Versioned<Slop>>> slopQueue) {
             this.nodeId = nodeId;
+            this.slopQueue = slopQueue;
         }
         public void run() {
-            adminClient.updateStoreEntries(nodeId, null);
+            adminClient.updateStoreEntries(nodeId, new SlopIterator(slopQueue));
         }
     }
 }
