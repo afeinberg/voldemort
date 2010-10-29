@@ -280,6 +280,11 @@ public class AdminClient {
         }
     }
 
+    public void updateStoreEntries(int nodeId,
+                                   Iterator<Pair<String,Pair<ByteArray, Versioned<byte[]>>>> entryIterator) {
+
+    }
+
     private void initiateFetchRequest(DataOutputStream outputStream,
                                       String storeName,
                                       List<Integer> partitionList,
