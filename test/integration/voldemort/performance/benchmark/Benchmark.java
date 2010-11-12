@@ -346,10 +346,11 @@ public class Benchmark {
             ClientConfig clientConfig = new ClientConfig().setMaxThreads(numThreads)
                                                           .setMaxTotalConnections(numThreads)
                                                           .setMaxConnectionsPerNode(numThreads)
+                                                          .setFailureDetectorBannagePeriod(5000)
                                                           .setBootstrapUrls(socketUrl)
-                                                          .setConnectionTimeout(60,
-                                                                                TimeUnit.SECONDS)
-                                                          .setSocketTimeout(60, TimeUnit.SECONDS)
+                                                          .setConnectionTimeout(500,
+                                                                                TimeUnit.MILLISECONDS)
+                                                          .setSocketTimeout(5, TimeUnit.SECONDS)
                                                           .setFailureDetectorRequestLengthThreshold(TimeUnit.SECONDS.toMillis(60))
                                                           .setSocketBufferSize(socketBufferSize)
                                                           .setSelectors(numSelectors)
