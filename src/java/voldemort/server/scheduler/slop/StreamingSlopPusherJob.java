@@ -12,6 +12,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
@@ -164,6 +165,7 @@ public class StreamingSlopPusherJob implements Runnable {
                 succeededByNode.put(node.getId(), 0L);
             }
 
+
             try {
                 StorageEngine<ByteArray, Slop, byte[]> slopStore = slopStorageEngine.asSlopStore();
                 iterator = slopStore.entries();
@@ -199,9 +201,14 @@ public class StreamingSlopPusherJob implements Runnable {
                                                                                              slopQueue,
                                                                                              slopStorageEngine)));
                             }
-                            slopQueue.offer(versioned,
-                                            voldemortConfig.getClientRoutingTimeoutMs(),
-                                            TimeUnit.MILLISECONDS);
+                            boolean offered = slopQueue.offer(versioned,
+                                                              voldemortConfig.getClientRoutingTimeoutMs(),
+                                                              TimeUnit.MILLISECONDS);
+                            if(!offered) {
+                                if(logger.isTraceEnabled())
+                                    logger.trace("Failed to offer a slop in " +
+                                                 voldemortConfig.getClientConnectionTimeoutMs() + " ms");
+                            }
                             readThrottler.maybeThrottle(nBytesRead(keyAndVal));
                         } else {
                             zoneMapping.get(node.getZoneId()).remove(node.getId());
@@ -233,13 +240,15 @@ public class StreamingSlopPusherJob implements Runnable {
                 }
 
                 // Adding the poison pill
+
                 for(SynchronousQueue<Versioned<Slop>> slopQueue: slopQueues.values()) {
                     try {
-                        if(!slopQueue.offer(END,
-                                            voldemortConfig.getClientRoutingTimeoutMs(),
-                                            TimeUnit.MILLISECONDS)) {
-                            logger.warn("consumer failed to appear in " +
-                                        voldemortConfig.getClientRoutingTimeoutMs());
+                        boolean offered = slopQueue.offer(END,
+                                                          voldemortConfig.getClientRoutingTimeoutMs(),
+                                                          TimeUnit.MILLISECONDS);
+                        if(!offered) {
+                            logger.warn("consumer for poison pill failed to appear in " +
+                                        voldemortConfig.getClientRoutingTimeoutMs() + " ms");
                         }
                     } catch(InterruptedException e) {
                         logger.warn("Error putting poison pill", e);
@@ -248,7 +257,14 @@ public class StreamingSlopPusherJob implements Runnable {
 
                 for(Future result: consumerResults) {
                     try {
-                        result.get();
+                        result.get(voldemortConfig.getSlopFrequencyMs(), TimeUnit.MILLISECONDS);
+                    } catch(InterruptedException e) {
+                        result.cancel(true);
+                        Thread.currentThread().interrupt();
+                        logger.error("Current thread interrupted while in the consumer ", e);
+                    } catch(TimeoutException e)  {
+                        result.cancel(true);
+                        logger.error("Timed out waiting for the consumer to finish ", e);
                     } catch(Exception e) {
                         logger.warn("Exception in consumer", e);
                     }
@@ -281,7 +297,6 @@ public class StreamingSlopPusherJob implements Runnable {
                 slopQueues.clear();
                 cleanUp();
             }
-
         }
     }
 
@@ -330,7 +345,8 @@ public class StreamingSlopPusherJob implements Runnable {
 
         private int writtenLast = 0;
         private long slopsDone = 0L;
-        private boolean shutDown = false, isComplete = false;
+        private boolean shutDown = false;
+        private boolean isComplete = false;
 
         public SlopIterator(SynchronousQueue<Versioned<Slop>> slopQueue,
                             List<Pair<ByteArray, Version>> deleteBatch) {
@@ -347,6 +363,9 @@ public class StreamingSlopPusherJob implements Runnable {
             try {
                 Versioned<Slop> head = null;
                 while(!shutDown) {
+                    if(Thread.interrupted())
+                        throw new InterruptedException("iterator interrupted");
+
                     head = slopQueue.poll();
                     if(head == null)
                         continue;
@@ -368,7 +387,7 @@ public class StreamingSlopPusherJob implements Runnable {
                 }
                 return endOfData();
             } catch(Exception e) {
-                logger.error("Got an exception " + e);
+                logger.error("Got an exception ", e);
                 return endOfData();
             }
         }
