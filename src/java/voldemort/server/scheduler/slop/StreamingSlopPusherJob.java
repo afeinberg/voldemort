@@ -165,7 +165,6 @@ public class StreamingSlopPusherJob implements Runnable {
                 succeededByNode.put(node.getId(), 0L);
             }
 
-
             try {
                 StorageEngine<ByteArray, Slop, byte[]> slopStore = slopStorageEngine.asSlopStore();
                 iterator = slopStore.entries();
@@ -240,14 +239,13 @@ public class StreamingSlopPusherJob implements Runnable {
                 }
 
                 // Adding the poison pill
-
                 for(SynchronousQueue<Versioned<Slop>> slopQueue: slopQueues.values()) {
                     try {
                         boolean offered = slopQueue.offer(END,
                                                           voldemortConfig.getClientRoutingTimeoutMs(),
                                                           TimeUnit.MILLISECONDS);
                         if(!offered) {
-                            logger.warn("consumer for poison pill failed to appear in " +
+                            logger.warn("Consumer for poison pill failed to appear in " +
                                         voldemortConfig.getClientRoutingTimeoutMs() + " ms");
                         }
                     } catch(InterruptedException e) {
@@ -260,8 +258,8 @@ public class StreamingSlopPusherJob implements Runnable {
                         result.get(voldemortConfig.getSlopFrequencyMs(), TimeUnit.MILLISECONDS);
                     } catch(InterruptedException e) {
                         result.cancel(true);
-                        Thread.currentThread().interrupt();
                         logger.error("Current thread interrupted while in the consumer ", e);
+                        Thread.currentThread().interrupt();
                     } catch(TimeoutException e)  {
                         result.cancel(true);
                         logger.error("Timed out waiting for the consumer to finish ", e);
@@ -363,8 +361,11 @@ public class StreamingSlopPusherJob implements Runnable {
             try {
                 Versioned<Slop> head = null;
                 while(!shutDown) {
-                    if(Thread.interrupted())
-                        throw new InterruptedException("iterator interrupted");
+                    if(Thread.interrupted()) {
+                        shutDown = true;
+                        isComplete = true;
+                        throw new InterruptedException("thread interrupted inside iterator");
+                    }
 
                     head = slopQueue.poll();
                     if(head == null)
@@ -391,7 +392,6 @@ public class StreamingSlopPusherJob implements Runnable {
                 return endOfData();
             }
         }
-
     }
 
     private class SlopConsumer implements Runnable {
