@@ -65,6 +65,7 @@ import voldemort.store.slop.Slop.Operation;
 import voldemort.store.socket.SocketDestination;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
+import voldemort.utils.EventThrottler;
 import voldemort.utils.NetworkClassLoader;
 import voldemort.utils.Pair;
 import voldemort.utils.RebalanceUtils;
@@ -1502,8 +1503,11 @@ public class AdminClient {
      * @param nodeId The id of the node
      * @param entryIterator An iterator over all the slops for this particular
      *        node
+     * @param throttler Event throttler instance to use
      */
-    public void updateSlopEntries(int nodeId, Iterator<Versioned<Slop>> entryIterator) {
+    public void updateSlopEntries(int nodeId,
+                                  Iterator<Versioned<Slop>> entryIterator,
+                                  EventThrottler throttler) {
         Node node = this.getAdminClientCluster().getNodeById(nodeId);
         SocketDestination destination = new SocketDestination(node.getHost(),
                                                               node.getAdminPort(),
@@ -1551,6 +1555,8 @@ public class AdminClient {
                     } else {
                         ProtoUtils.writeMessage(outputStream, updateRequest.build());
                     }
+                    if(throttler != null)
+                        throttler.maybeThrottle(Slop.versionedSize(versionedSlop));
                 }
                 ProtoUtils.writeEndOfStream(outputStream);
                 outputStream.flush();

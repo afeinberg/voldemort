@@ -35,7 +35,6 @@ import voldemort.utils.ByteArray;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.EventThrottler;
 import voldemort.utils.Pair;
-import voldemort.versioning.VectorClock;
 import voldemort.versioning.Version;
 import voldemort.versioning.Versioned;
 
@@ -304,32 +303,7 @@ public class StreamingSlopPusherJob implements Runnable {
     }
 
     private int nBytesRead(Pair<ByteArray, Versioned<Slop>> keyAndVal) {
-        return keyAndVal.getFirst().length() + slopSize(keyAndVal.getSecond());
-    }
-
-    /**
-     * Returns the approximate size of slop to help in throttling
-     * 
-     * @param slopVersioned The versioned slop whose size we want
-     * @return Size in bytes
-     */
-    private int slopSize(Versioned<Slop> slopVersioned) {
-        int nBytes = 0;
-        Slop slop = slopVersioned.getValue();
-        nBytes += slop.getKey().length();
-        nBytes += ((VectorClock) slopVersioned.getVersion()).sizeInBytes();
-        switch(slop.getOperation()) {
-            case PUT: {
-                nBytes += slop.getValue().length;
-                break;
-            }
-            case DELETE: {
-                break;
-            }
-            default:
-                logger.error("Unknown slop operation: " + slop.getOperation());
-        }
-        return nBytes;
+        return keyAndVal.getFirst().length() + Slop.versionedSize(keyAndVal.getSecond());
     }
 
     /**
@@ -342,7 +316,6 @@ public class StreamingSlopPusherJob implements Runnable {
         private final List<Pair<ByteArray, Version>> deleteBatch;
         private final AtomicLong slopsDone = new AtomicLong(0L);
 
-        private volatile int writtenLast = 0;
         private volatile boolean shutDown = false;
         private volatile boolean isComplete = false;
 
@@ -359,34 +332,28 @@ public class StreamingSlopPusherJob implements Runnable {
         @Override
         protected Versioned<Slop> computeNext() {
             try {
-                Versioned<Slop> head;
-                while(!shutDown) {
-                    if(Thread.interrupted()) {
-                        shutDown = true;
-                        isComplete = true;
-                        throw new InterruptedException("thread interrupted inside iterator");
-                    }
-
-                    head = slopQueue.poll();
-                    if(head == null)
-                        continue;
-
+                Versioned<Slop> head = null;
+                if(!shutDown) {
+                    head = slopQueue.take();
                     if(head.equals(END)) {
                         shutDown = true;
                         isComplete = true;
                     } else {
-                        if(slopsDone.incrementAndGet() % voldemortConfig.getSlopBatchSize() == 0)
+                        if(slopsDone.incrementAndGet() % voldemortConfig.getSlopBatchSize() == 0) {
                             shutDown = true;
-
-                        writeThrottler.maybeThrottle(writtenLast);
-                        writtenLast = slopSize(head);
+                        }
                         deleteBatch.add(Pair.create(head.getValue().makeKey(), head.getVersion()));
                         return head;
                     }
                 }
                 return endOfData();
+            } catch(InterruptedException ie) {
+                isComplete = true;
+                shutDown = true;
+                logger.error("Thread interrupted in computeNext()", ie);
+                return endOfData();
             } catch(Exception e) {
-                logger.error("Got an exception ", e);
+                logger.error("Exception in computeNext()", e);
                 return endOfData();
             }
         }
@@ -436,7 +403,7 @@ public class StreamingSlopPusherJob implements Runnable {
 
                     this.startTime = System.currentTimeMillis();
                     iterator = new SlopIterator(slopQueue, current);
-                    adminClient.updateSlopEntries(nodeId, iterator);
+                    adminClient.updateSlopEntries(nodeId, iterator, writeThrottler);
                 } while(!iterator.isComplete());
 
                 // Clear up both previous and current

@@ -24,6 +24,8 @@ import voldemort.utils.ByteUtils;
 import voldemort.utils.Utils;
 
 import com.google.common.base.Objects;
+import voldemort.versioning.VectorClock;
+import voldemort.versioning.Versioned;
 
 /**
  * Represents an undelivered operation to a store.
@@ -122,6 +124,30 @@ public class Slop {
                                            nodeIdBytes,
                                            spacer,
                                            key.get()));
+    }
+
+    /**
+     * Get the approximate size of slop to help in throttling
+     * @param versionedSlop A {@link Versioned} slop object
+     * @return Size of <code>versionedSlop</code> in bytes
+     */
+    public static int versionedSize(Versioned<Slop> versionedSlop) {
+        int nBytes = 0;
+        Slop slop = versionedSlop.getValue();
+        nBytes += slop.getKey().length();
+        nBytes += ((VectorClock) versionedSlop.getVersion()).sizeInBytes();
+        switch(slop.getOperation()) {
+            case PUT: {
+                nBytes += slop.getValue().length;
+                break;
+            }
+            case DELETE: {
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("Unknown slop operation: " + slop.getOperation());
+        }
+        return nBytes;
     }
 
     @Override

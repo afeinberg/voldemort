@@ -647,7 +647,7 @@ public class AdminServiceBasicTest extends TestCase {
                                                                                  "test-consistent-with-pref-list");
 
         Iterator<Versioned<Slop>> slopIterator = entrySet.iterator();
-        getAdminClient().updateSlopEntries(0, slopIterator);
+        getAdminClient().updateSlopEntries(0, slopIterator, null);
 
         // check updated values
         Iterator<Versioned<Slop>> entrysetItr = entrySet.iterator();
