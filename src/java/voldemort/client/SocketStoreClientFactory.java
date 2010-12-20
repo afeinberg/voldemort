@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Level;
 import voldemort.VoldemortException;
 import voldemort.client.protocol.RequestFormatType;
 import voldemort.cluster.Node;
@@ -80,6 +81,8 @@ public class SocketStoreClientFactory extends AbstractStoreClientFactory {
             SocketDestination destination = new SocketDestination(url.getHost(),
                                                                   url.getPort(),
                                                                   getRequestFormatType());
+            if(logger.isEnabledFor(Level.WARN))
+                logger.warn("Bootstrap failed, closing socket", e);
             storeFactory.close(destination);
             throw new VoldemortException(e);
         }
