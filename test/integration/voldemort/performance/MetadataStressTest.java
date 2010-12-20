@@ -20,13 +20,15 @@ public class MetadataStressTest {
     public static void main(String[] args) throws Exception {
 
         if(args.length < 3) {
-            System.err.println("java voldemort.performance.MetadataStressTest url iterations threads");
+            System.err.println("java voldemort.performance.MetadataStressTest url iterations threads selectors");
             System.exit(-1);
         }
 
         String url = args[0];
         final int count = Integer.parseInt(args[1]);
         int numThreads = Integer.parseInt(args[2]);
+        int numSelectors = args.length > 3 ? Integer.parseInt(args[3]) : 8;
+
         ExecutorService executor = Executors.newFixedThreadPool(numThreads,
                                                                 new ThreadFactory() {
 
@@ -39,7 +41,7 @@ public class MetadataStressTest {
         try {
             final SocketStoreClientFactory factory = new SocketStoreClientFactory(new ClientConfig().setBootstrapUrls(url)
                                                                                                     .setMaxThreads(numThreads)
-                                                                                                    .setSelectors(numThreads));
+                                                                                                    .setSelectors(numSelectors));
             for(int i = 0; i < numThreads; i++) {
                 executor.submit(new Runnable() {
 
@@ -51,7 +53,6 @@ public class MetadataStressTest {
                                 String storesXml = factory.bootstrapMetadataWithRetries(MetadataStore.STORES_KEY);
                                 List<StoreDefinition> storeDefs = new StoreDefinitionsMapper().readStoreList(new StringReader(storesXml));
                                 System.out.println("ok " + j);
-                                Thread.sleep(1);
                             } catch(MappingException me) {
                                 me.printStackTrace();
                                 System.exit(-1);
