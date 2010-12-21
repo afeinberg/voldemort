@@ -1,5 +1,6 @@
 package voldemort.performance;
 
+import org.apache.log4j.Logger;
 import voldemort.client.ClientConfig;
 import voldemort.client.SocketStoreClientFactory;
 import voldemort.cluster.Cluster;
@@ -14,8 +15,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 public class MetadataStressTest {
+
+    private final static Logger logger = Logger.getLogger(MetadataStressTest.class);
 
     public static void main(String[] args) throws Exception {
 
@@ -40,6 +44,8 @@ public class MetadataStressTest {
                                                                 });
         try {
             final SocketStoreClientFactory factory = new SocketStoreClientFactory(new ClientConfig().setBootstrapUrls(url)
+                                                                                                    .setConnectionTimeout(10, TimeUnit.SECONDS)
+                                                                                                    .setSocketTimeout(10, TimeUnit.SECONDS)
                                                                                                     .setMaxThreads(numThreads)
                                                                                                     .setSelectors(numSelectors));
             for(int i = 0; i < numThreads; i++) {
@@ -52,13 +58,13 @@ public class MetadataStressTest {
                                 Cluster cluster = new ClusterMapper().readCluster(new StringReader(clusterXml));
                                 String storesXml = factory.bootstrapMetadataWithRetries(MetadataStore.STORES_KEY);
                                 List<StoreDefinition> storeDefs = new StoreDefinitionsMapper().readStoreList(new StringReader(storesXml));
-                                System.out.println("ok " + j);
+                                if(logger.isTraceEnabled())
+                                    logger.trace("ok " + j);
                             } catch(MappingException me) {
-                                me.printStackTrace();
+                                logger.fatal(me, me);
                                 System.exit(-1);
                             } catch(Exception e) {
-                                // Don't fail on non XML exceptions, just continue on
-                                e.printStackTrace();
+                                logger.error(e, e);
                             }
                         }
                     }
