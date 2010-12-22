@@ -32,6 +32,7 @@ public class MetadataStressTest {
         final int count = Integer.parseInt(args[1]);
         int numThreads = Integer.parseInt(args[2]);
         int numSelectors = args.length > 3 ? Integer.parseInt(args[3]) : 8;
+        int timeoutSecs = args.length > 4 ? Integer.parseInt(args[4]) : 10;
 
         ExecutorService executor = Executors.newFixedThreadPool(numThreads,
                                                                 new ThreadFactory() {
@@ -44,8 +45,8 @@ public class MetadataStressTest {
                                                                 });
         try {
             final SocketStoreClientFactory factory = new SocketStoreClientFactory(new ClientConfig().setBootstrapUrls(url)
-                                                                                                    .setConnectionTimeout(10, TimeUnit.SECONDS)
-                                                                                                    .setSocketTimeout(10, TimeUnit.SECONDS)
+                                                                                                    .setConnectionTimeout(timeoutSecs, TimeUnit.SECONDS)
+                                                                                                    .setSocketTimeout(timeoutSecs, TimeUnit.SECONDS)
                                                                                                     .setMaxThreads(numThreads)
                                                                                                     .setSelectors(numSelectors));
             for(int i = 0; i < numThreads; i++) {
