@@ -256,6 +256,15 @@ public class ServerTestUtils {
         return getLocalCluster(numberOfNodes, findFreePorts(3 * numberOfNodes), partitionMap);
     }
 
+    public static Cluster getLocalClusterWithZones(int numberOfNodes,
+                                                   int[][] partitionMap,
+                                                   int[][] zoneMap) {
+        return getLocalClusterWithZones(numberOfNodes,
+                                        findFreePorts(3 * numberOfNodes),
+                                        partitionMap,
+                                        zoneMap);
+    }
+
     public static Cluster getLocalCluster(int numberOfNodes, int[] ports, int[][] partitionMap) {
         if(3 * numberOfNodes != ports.length)
             throw new IllegalArgumentException(3 * numberOfNodes + " ports required but only "
@@ -279,6 +288,56 @@ public class ServerTestUtils {
         }
 
         return new Cluster("test-cluster", nodes);
+    }
+
+    public static LinkedList<Integer> fakeProximityList(int numberOfZones, int zoneId) {
+        LinkedList<Integer> zoneIds = Lists.newLinkedList();
+        for(int i = 0; i < numberOfZones; i++) {
+            if(zoneId != i)
+                zoneIds.add(i);
+        }
+        return zoneIds;
+    }
+
+    public static Cluster getLocalClusterWithZones(int numberOfNodes,
+                                                   int[] ports,
+                                                   int[][] partitionMap,
+                                                   int[][] zoneMap) {
+        if(3 * numberOfNodes != ports.length)
+            throw new IllegalArgumentException(3 * numberOfNodes + " ports required but only "
+                                               + ports.length + " given.");
+        int[] nodeToZone = new int[numberOfNodes];
+        for(int i = 0; i < zoneMap.length; i++) {
+            for(int j = 0; j < zoneMap[i].length; j++)
+                nodeToZone[zoneMap[i][j]] = i;
+        }
+
+        List<Zone> zones = Lists.newArrayList();
+        for(int i = 0; i < zoneMap.length; i++) {
+            Zone zone = new Zone(i, fakeProximityList(zoneMap.length, i));
+            zones.add(zone);
+        }
+
+        List<Node> nodes = Lists.newArrayList();
+        for(int i = 0; i < numberOfNodes; i++) {
+            List<Integer> partitions;
+            if(null != partitionMap) {
+                partitions = Lists.newArrayListWithExpectedSize(partitionMap[i].length);
+                for(int p: partitionMap[i])
+                    partitions.add(p);
+            } else {
+                partitions = ImmutableList.of(i);
+            }
+            nodes.add(new Node(i,
+                               "localhost",
+                               ports[3 * i],
+                               ports[3 * i + 1],
+                               ports[3 * i + 2],
+                               nodeToZone[i],
+                               partitions));
+        }
+
+        return new Cluster("test-cluster-zones", nodes, zones);
     }
 
     /**
