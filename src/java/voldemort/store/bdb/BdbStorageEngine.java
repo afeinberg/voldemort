@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.sleepycat.je.EnvironmentStats;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.Logger;
 
@@ -430,7 +431,7 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
         }
     }
 
-    public DatabaseStats getStats(boolean setFast) {
+    public DatabaseStats getDatabaseStats(boolean setFast) {
         try {
             StatsConfig config = new StatsConfig();
             config.setFast(setFast);
@@ -441,9 +442,20 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
         }
     }
 
+    public EnvironmentStats getEnvironmentStats(boolean setFast) {
+        try {
+            StatsConfig config = new StatsConfig();
+            config.setFast(true);
+            return environment.getStats(config);
+        } catch(DatabaseException e) {
+            logger.error(e);
+            throw new VoldemortException(e);
+        }
+    }
+
     @JmxOperation(description = "A variety of stats about the BDB for this store.")
     public String getBdbStats() {
-        String stats = getStats(false).toString();
+        String stats = getDatabaseStats(false).toString();
         return stats;
     }
 
