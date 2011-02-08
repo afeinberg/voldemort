@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,6 +52,8 @@ import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.BannagePeriodFailureDetector;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.cluster.failuredetector.FailureDetectorConfig;
+import voldemort.routing.RoutingStrategy;
+import voldemort.routing.RoutingStrategyFactory;
 import voldemort.routing.RoutingStrategyType;
 import voldemort.serialization.SerializerDefinition;
 import voldemort.store.AbstractByteArrayStoreTest;
@@ -608,6 +611,92 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
             /*
              * The other zone is down and you expect a result from both zones
              */
+        }
+
+    }
+
+    @Test
+    public void testPutDeleteZoneRouting() throws Exception {
+        cluster = VoldemortTestConstants.getEightNodeClusterWithZones();
+
+        HashMap<Integer, Integer> zoneReplicationFactor = Maps.newHashMap();
+        zoneReplicationFactor.put(0, 2);
+        zoneReplicationFactor.put(1, 2);
+
+        Versioned<byte[]> versioned = new Versioned<byte[]>(new byte[] { 1 });
+
+        Map<Integer, Store<ByteArray, byte[], byte[]>> subStores = Maps.newHashMap();
+        Set<Integer> sleepy = Sets.newHashSet(4, 5, 6, 7);
+        int count = 0;
+        for(Node n: cluster.getNodes()) {
+            Store<ByteArray, byte[], byte[]> subStore = null;
+
+            if(sleepy != null && sleepy.contains(n.getId()))
+                subStore = new SleepyStore<ByteArray, byte[], byte[]>(81,
+                                                                      new InMemoryStorageEngine<ByteArray, byte[], byte[]>("test"));
+            else
+                subStore = new InMemoryStorageEngine<ByteArray, byte[], byte[]>("test");
+
+            subStores.put(n.getId(), subStore);
+
+            count += 1;
+        }
+
+        setFailureDetector(subStores);
+        StoreDefinition storeDef = ServerTestUtils.getStoreDef("test",
+                                                               1,
+                                                               1,
+                                                               1,
+                                                               1,
+                                                               0,
+                                                               0,
+                                                               zoneReplicationFactor,
+                                                               HintedHandoffStrategyType.PROXIMITY_STRATEGY,
+                                                               RoutingStrategyType.ZONE_STRATEGY);
+        routedStoreThreadPool = Executors.newFixedThreadPool(8);
+        RoutedStoreFactory routedStoreFactory = new RoutedStoreFactory(true,
+                                                                       routedStoreThreadPool,
+                                                                       60);
+
+        Store<ByteArray, byte[], byte[]> s1 = routedStoreFactory.create(cluster,
+                                                                        storeDef,
+                                                                        subStores,
+                                                                        true,
+                                                                        failureDetector);
+
+        RoutingStrategy routingStrategy = new RoutingStrategyFactory().updateRoutingStrategy(storeDef,
+                                                                                             cluster);
+
+        List<Node> nodesRoutedTo = routingStrategy.routeRequest("test".getBytes());
+        long start = System.nanoTime(), elapsed;
+        try {
+            s1.put(new ByteArray("test".getBytes()), versioned, null);
+        } finally {
+            elapsed = (System.nanoTime() - start) / Time.NS_PER_MS;
+            assertTrue(elapsed + " < " + 81, elapsed < 81);
+        }
+
+        Thread.sleep(81 - elapsed);
+
+        for(Node node: nodesRoutedTo) {
+            Assert.assertEquals(subStores.get(node.getId()).get(new ByteArray("test".getBytes()),
+                                                                null).get(0), versioned);
+        }
+
+        start = System.nanoTime();
+        try {
+            s1.delete(new ByteArray("test".getBytes()), versioned.getVersion());
+        } finally {
+            elapsed = (System.nanoTime() - start) / Time.NS_PER_MS;
+            assertTrue(elapsed + " < " + 81, elapsed < 81);
+        }
+
+        Thread.sleep(81 - elapsed);
+
+        for(Node node: nodesRoutedTo) {
+            assertEquals(subStores.get(node.getId())
+                                  .get(new ByteArray("test".getBytes()), null)
+                                  .size(), 0);
         }
 
     }
