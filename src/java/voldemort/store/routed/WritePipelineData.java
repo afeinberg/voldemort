@@ -3,7 +3,7 @@ package voldemort.store.routed;
 import voldemort.cluster.Node;
 import voldemort.versioning.Version;
 
-public class WritePipelineData extends BasicPipelineData<Void> {
+public class WritePipelineData<T> extends BasicPipelineData<T> {
 
     private Node master;
 

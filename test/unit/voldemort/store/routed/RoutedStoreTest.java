@@ -445,7 +445,8 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
 
         Map<ByteArray, List<Versioned<byte[]>>> values = s1.getAll(keys, null);
         for(ByteArray key: values.keySet()) {
-            ByteUtils.compare(values.get(key).get(0).getValue(), new byte[] { 1 });
+            if(values.get(key).size() > 0)
+                ByteUtils.compare(values.get(key).get(0).getValue(), new byte[] { 1 });
         }
 
         // Basic put with zone read = 1, zone write = 1
@@ -668,7 +669,8 @@ public class RoutedStoreTest extends AbstractByteArrayStoreTest {
                                                                                              cluster);
 
         List<Node> nodesRoutedTo = routingStrategy.routeRequest("test".getBytes());
-        long start = System.nanoTime(), elapsed;
+        long start = System.nanoTime();
+        long elapsed;
         try {
             s1.put(new ByteArray("test".getBytes()), versioned, null);
         } finally {

@@ -24,7 +24,7 @@ import voldemort.versioning.Versioned;
  * that operation.
  */
 
-public class PutPipelineData extends WritePipelineData {
+public class PutPipelineData extends WritePipelineData<Void> {
 
     private Versioned<byte[]> versionedCopy;
 

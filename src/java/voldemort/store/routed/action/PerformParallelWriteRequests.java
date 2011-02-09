@@ -18,6 +18,7 @@ import voldemort.store.slop.HintedHandoff;
 import voldemort.store.slop.Slop;
 import voldemort.utils.ByteArray;
 import voldemort.utils.Time;
+import voldemort.utils.Utils;
 import voldemort.versioning.ObsoleteVersionException;
 import voldemort.versioning.Version;
 
@@ -27,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
-        extends AbstractKeyBasedAction<ByteArray, Void, PD> {
+public abstract class PerformParallelWriteRequests<T, PD extends WritePipelineData<T>>
+        extends AbstractKeyBasedAction<ByteArray, T, PD> {
 
     private final FailureDetector failureDetector;
     private final int preferred;
@@ -36,6 +37,8 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
     private final long timeoutMs;
     private final Map<Integer, NonblockingStore> nonblockingStores;
     private final HintedHandoff hintedHandoff;
+    private final Event insufficientWritesEvent;
+    private final Event insufficientZonesEvent;
     private final boolean enableHintedHandoff;
 
     public PerformParallelWriteRequests(PD pipelineData,
@@ -46,7 +49,9 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
                                         int required,
                                         long timeoutMs,
                                         Map<Integer, NonblockingStore> nonblockingStores,
-                                        HintedHandoff hintedHandoff) {
+                                        HintedHandoff hintedHandoff,
+                                        Event insufficientWritesEvent,
+                                        Event insufficientZonesEvent) {
         super(pipelineData, completeEvent, key);
         this.failureDetector = failureDetector;
         this.preferred = preferred;
@@ -54,17 +59,28 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
         this.timeoutMs = timeoutMs;
         this.nonblockingStores = nonblockingStores;
         this.hintedHandoff = hintedHandoff;
+        this.insufficientWritesEvent = insufficientWritesEvent;
+        this.insufficientZonesEvent = insufficientZonesEvent;
         enableHintedHandoff = hintedHandoff != null;
     }
 
-    public boolean isHintedHandoffEnabled() {
-        return enableHintedHandoff;
-    }
 
-    protected abstract Slop makeSlop();
+    protected abstract Slop makeSlop(Node node);
 
     protected abstract void performRequest(NonblockingStore store,
                                            NonblockingStoreCallback callback);
+
+    protected abstract void handleResponseSuccess(int nodeId, Response<ByteArray, Object> response);
+
+    public long getTimeoutMs() {
+        return timeoutMs;
+    }
+
+    public boolean isHintedHandoffEnabled() {
+           return enableHintedHandoff;
+    }
+
+
 
     public void execute(final Pipeline pipeline) {
         Node master = pipelineData.getMaster();
@@ -75,8 +91,8 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
 
         List<Node> nodes = pipelineData.getNodes();
         int firstParallelNodeIndex = nodes.indexOf(master) + 1;
-        int attempts = nodes.size() - firstParallelNodeIndex;
-        int blocks = Math.min(preferred -1, attempts);
+        int attempts = nodes.size() - ( master == null ? 0 : firstParallelNodeIndex );
+        int blocks = master == null ? preferred : Math.min(preferred -1, attempts);
 
         final Map<Integer, Response<ByteArray, Object>> responses = new ConcurrentHashMap<Integer, Response<ByteArray, Object>>();
         final CountDownLatch attemptsLatch = new CountDownLatch(attempts);
@@ -104,7 +120,7 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
                     responses.put(node.getId(), response);
                     if(isHintedHandoffEnabled() && pipeline.isFinished()) {
                         if(response.getValue() instanceof UnreachableStoreException) {
-                            Slop slop = makeSlop();
+                            Slop slop = makeSlop(node);
                             pipelineData.addFailedNode(node);
                             hintedHandoff.sendHintSerial(node, pipelineData.getVersion(), slop);
                         }
@@ -112,6 +128,7 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
 
                     attemptsLatch.countDown();
                     blocksLatch.countDown();
+
                     if(logger.isTraceEnabled())
                         logger.trace(attemptsLatch.getCount() + " attempts remaining. Will block "
                                      + " for " + blocksLatch.getCount() + " more");
@@ -151,6 +168,7 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
                 pipelineData.incrementSuccesses();
                 failureDetector.recordSuccess(response.getNode(), response.getRequestTime());
                 pipelineData.getZoneResponses().add(response.getNode().getZoneId());
+                handleResponseSuccess(responseEntry.getKey(), response);
                 responses.remove(responseEntry.getKey());
             }
         }
@@ -184,69 +202,78 @@ public abstract class PerformParallelWriteRequests<PD extends WritePipelineData>
             }
 
             if(pipelineData.getSuccesses() < required) {
-                pipelineData.setFatalError(new InsufficientOperationalNodesException(required
-                                                                                     + " "
-                                                                                     + pipeline.getOperation()
-                                                                                               .getSimpleName()
-                                                                                     + "s required, but only"
-                                                                                     + pipelineData.getSuccesses()
-                                                                                     + " succeeded",
-                                                                                     pipelineData.getFailures()));
-                pipeline.abort();
-                quorumMet = false;
-            }
-
-            if(quorumMet) {
-                if(pipelineData.getZonesRequired() != null) {
-                    int zonesSatisfied = pipelineData.getZoneResponses().size();
-                    if(zonesSatisfied >= (pipelineData.getZonesRequired() + 1)) {
-                        pipeline.addEvent(completeEvent);
-                    } else  {
-                        long timeMs = (System.nanoTime() - pipelineData.getStartTimeNs())
-                                      / Time.NS_PER_MS;
-                        if((timeoutMs - timeMs) > 0) {
-                            try {
-                                attemptsLatch.await(timeoutMs - timeMs, TimeUnit.MILLISECONDS);
-                            } catch(InterruptedException e) {
-                                if(logger.isEnabledFor(Level.WARN))
-                                    logger.warn(e, e);
-                            }
-
-                            for(Map.Entry<Integer, Response<ByteArray, Object>> responseEntry: responses.entrySet()) {
-                                Response<ByteArray, Object> response = responseEntry.getValue();
-                                if(response.getValue() instanceof Exception) {
-                                    if(handleResponseError(response, pipeline, failureDetector))
-                                        return;
-                                } else {
-                                    pipelineData.incrementSuccesses();
-                                    failureDetector.recordSuccess(response.getNode(),
-                                                                  response.getRequestTime());
-                                    pipelineData.getZoneResponses().add(response.getNode().getZoneId());
-                                    responses.remove(responseEntry.getKey());
-                                }
-                            }
-                        }
-
-                        if(pipelineData.getZoneResponses().size() >= (pipelineData.getZonesRequired() + 1)) {
-                            pipeline.addEvent(completeEvent);
-                        } else {
-                            pipelineData.setFatalError(new InsufficientZoneResponsesException((pipelineData.getZonesRequired() + 1)
-                                                                                              + " "
-                                                                                              + pipeline.getOperation()
-                                                                                                        .getSimpleName()
-                                                                                              + "s required zone, but only "
-                                                                                              + zonesSatisfied
-                                                                                              + " succeeded"));
-                            pipeline.abort();
-                        }
-                    }
-                }
-                else {
-                    pipeline.addEvent(completeEvent);
+                if(insufficientWritesEvent != null) {
+                    pipeline.addEvent(insufficientWritesEvent);
+                    quorumMet = false;
+                } else {
+                    pipelineData.setFatalError(new InsufficientOperationalNodesException(required
+                                                                                         + " "
+                                                                                         + pipeline.getOperation()
+                                                                                                   .getSimpleName()
+                                                                                         + "s required, but only"
+                                                                                         + pipelineData.getSuccesses()
+                                                                                         + " succeeded",
+                                                                                         pipelineData.getFailures()));
+                    pipeline.abort();
+                    quorumMet = false;
                 }
             }
         }
+
+        if(quorumMet) {
+            if(pipelineData.getZonesRequired() != null) {
+                int zonesSatisfied = pipelineData.getZoneResponses().size();
+                if(zonesSatisfied >= (pipelineData.getZonesRequired() + 1)) {
+                    pipeline.addEvent(completeEvent);
+                } else  {
+                    long timeMs = (System.nanoTime() - pipelineData.getStartTimeNs())
+                                  / Time.NS_PER_MS;
+                    if((timeoutMs - timeMs) > 0) {
+                        try {
+                            attemptsLatch.await(timeoutMs - timeMs, TimeUnit.MILLISECONDS);
+                        } catch(InterruptedException e) {
+                            if(logger.isEnabledFor(Level.WARN))
+                                logger.warn(e, e);
+                        }
+
+                        for(Map.Entry<Integer, Response<ByteArray, Object>> responseEntry: responses.entrySet()) {
+                            Response<ByteArray, Object> response = responseEntry.getValue();
+                            if(response.getValue() instanceof Exception) {
+                                if(handleResponseError(response, pipeline, failureDetector))
+                                    return;
+                            } else {
+                                pipelineData.incrementSuccesses();
+                                failureDetector.recordSuccess(response.getNode(),
+                                                              response.getRequestTime());
+                                pipelineData.getZoneResponses().add(response.getNode().getZoneId());
+                                handleResponseSuccess(responseEntry.getKey(), response);
+                                responses.remove(responseEntry.getKey());
+                            }
+                        }
+                    }
+
+                    if(pipelineData.getZoneResponses().size() >= (pipelineData.getZonesRequired() + 1)) {
+                        pipeline.addEvent(completeEvent);
+                    } else if(insufficientZonesEvent != null) {
+                        pipeline.addEvent(insufficientZonesEvent);
+                    } else {
+                        pipelineData.setFatalError(new InsufficientZoneResponsesException((pipelineData.getZonesRequired() + 1)
+                                                                                          + " "
+                                                                                          + pipeline.getOperation()
+                                                                                                    .getSimpleName()
+                                                                                          + "s required zone, but only "
+                                                                                          + zonesSatisfied
+                                                                                          + " succeeded"));
+                        pipeline.abort();
+                    }
+                }
+            }
+            else {
+                pipeline.addEvent(completeEvent);
+            }
+        }
     }
+
 }
 
 
