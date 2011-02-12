@@ -25,7 +25,7 @@ import voldemort.versioning.Versioned;
  * that operation.
  */
 
-public class PutPipelineData extends BasicPipelineData<Void> {
+public class PutPipelineData extends TimedPipelineData<Void> {
 
     private Node master;
 
@@ -77,23 +77,4 @@ public class PutPipelineData extends BasicPipelineData<Void> {
     public void setVersionedCopy(Versioned<byte[]> versionedCopy) {
         this.versionedCopy = versionedCopy;
     }
-
-    /**
-     * Set start time to perform timeout correctly
-     * 
-     * @param nanoTime
-     */
-    public void setStartTimeNs(long startTimeNs) {
-        this.startTimeNs = startTimeNs;
-    }
-
-    /**
-     * Get start time to perform timeout correctly
-     * 
-     * @param nanoTime
-     */
-    public long getStartTimeNs() {
-        return this.startTimeNs;
-    }
-
 }
