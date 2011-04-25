@@ -243,4 +243,8 @@ public class ConfigurationStorageEngine implements StorageEngine<String, String,
     public boolean isPartitionAware() {
         return false;
     }
+
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in ConfigurationStorageEngine");
+    }
 }

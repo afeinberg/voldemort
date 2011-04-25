@@ -78,4 +78,10 @@ public interface StorageEngine<K, V, T> extends Store<K, V, T> {
      */
     public boolean isPartitionAware();
 
+    /**
+     * Calculate disk utilization
+     *
+     * @return Kilobytes of space occupied by this StorageEngine.
+     */
+    public long diskUtilization();
 }

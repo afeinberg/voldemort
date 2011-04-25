@@ -75,4 +75,9 @@ public class RandomlyFailingDelegatingStore<K, V, T> extends DelegatingStore<K, 
     public boolean isPartitionAware() {
         return innerStorageEngine.isPartitionAware();
     }
+
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in "
+                                     + "RandomlyFailingDelegatingStore");
+    }
 }

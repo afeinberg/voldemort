@@ -93,6 +93,10 @@ public class SlopStorageEngine implements StorageEngine<ByteArray, byte[], byte[
         slopEngine.truncate();
     }
 
+    public long diskUtilization() {
+        return slopEngine.diskUtilization();
+    }
+
     public List<Versioned<byte[]>> get(ByteArray key, byte[] transforms) throws VoldemortException {
         return slopEngine.get(key, transforms);
     }

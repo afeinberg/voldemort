@@ -65,6 +65,10 @@ public class NoopStorageEngine implements StorageEngine<ByteArray, byte[], byte[
 
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in ReadOnlyStorageEngine");
+    }
+
     public List<Versioned<byte[]>> get(ByteArray key, byte[] transforms) throws VoldemortException {
         return dataList;
     }

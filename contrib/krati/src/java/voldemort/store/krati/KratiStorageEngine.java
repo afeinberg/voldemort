@@ -94,6 +94,10 @@ public class KratiStorageEngine implements StorageEngine<ByteArray, byte[], byte
         }
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in KratiStorageEngine");
+    }
+
     public List<Versioned<byte[]>> get(ByteArray key, byte[] transforms) throws VoldemortException {
         StoreUtils.assertValidKey(key);
         try {
