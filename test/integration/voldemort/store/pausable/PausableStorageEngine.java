@@ -89,6 +89,10 @@ public class PausableStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
         inner.deleteAll();
     }
 
+    public long diskUtilization() {
+        return inner.diskUtilization();
+    }
+
     public List<Version> getVersions(K key) {
         blockIfNecessary();
         return inner.getVersions(key);

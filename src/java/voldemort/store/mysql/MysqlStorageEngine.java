@@ -147,6 +147,10 @@ public class MysqlStorageEngine implements StorageEngine<ByteArray, byte[], byte
         }
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in MysqlStorageEngine");
+    }
+
     public void close() throws PersistenceFailureException {
     // don't close datasource cause others could be using it
     }

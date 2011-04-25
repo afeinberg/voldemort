@@ -71,4 +71,9 @@ public class RandomlyFailingDelegatingStore<K, V, T> extends DelegatingStore<K, 
 
         throw new VoldemortException("Failing now !!");
     }
+
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in "
+                                     + "RandomlyFailingDelegatingStore");
+    }
 }

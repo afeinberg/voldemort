@@ -169,6 +169,10 @@ public class ViewStorageEngine implements StorageEngine<ByteArray, byte[], byte[
         }
     }
 
+    public long diskUtilization() {
+        return target.diskUtilization();
+    }
+
     public Object getCapability(StoreCapabilityType capability) {
         if(capability == StoreCapabilityType.VIEW_TARGET)
             return this.target;

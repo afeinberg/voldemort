@@ -449,6 +449,10 @@ public class ReadOnlyStorageEngine implements StorageEngine<ByteArray, byte[], b
         logger.debug("Truncate successful for read-only store ");
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in ReadOnlyStorageEngine");
+    }
+
     public List<Versioned<byte[]>> get(ByteArray key, byte[] transforms) throws VoldemortException {
         StoreUtils.assertValidKey(key);
         try {

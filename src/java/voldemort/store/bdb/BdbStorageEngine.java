@@ -174,6 +174,10 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
         }
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in BdbStorageEngine");
+    }
+
     private void commitOrAbort(boolean succeeded, Transaction transaction) {
         try {
             if(succeeded) {

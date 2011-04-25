@@ -176,6 +176,10 @@ public class InMemoryStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
         map.clear();
     }
 
+    public long diskUtilization() {
+        throw new VoldemortException("DiskUtilization not supported in InMemoryStorageEngine");
+    }
+
     public String getName() {
         return name;
     }

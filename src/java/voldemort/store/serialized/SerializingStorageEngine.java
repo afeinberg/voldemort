@@ -65,6 +65,10 @@ public class SerializingStorageEngine<K, V, T> extends SerializingStore<K, V, T>
         storageEngine.truncate();
     }
 
+    public long diskUtilization() {
+        return storageEngine.diskUtilization();
+    }
+
     private class KeysIterator implements ClosableIterator<K> {
 
         private final ClosableIterator<ByteArray> iterator;

@@ -69,4 +69,11 @@ public interface StorageEngine<K, V, T> extends Store<K, V, T> {
      * Truncate all entries in the store
      */
     public void truncate();
+
+    /**
+     * Calculate disk utilization
+     *
+     * @return Kilobytes of space occupied by this StorageEngine.
+     */
+    public long diskUtilization();
 }
