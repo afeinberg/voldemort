@@ -5,6 +5,7 @@ import java.util.List;
 
 import voldemort.client.RoutingTier;
 import voldemort.serialization.SerializerDefinition;
+import voldemort.store.quota.Quota;
 import voldemort.store.slop.strategy.HintedHandoffStrategyType;
 import voldemort.utils.Utils;
 
@@ -40,6 +41,7 @@ public class StoreDefinitionBuilder {
     private HintedHandoffStrategyType hintedHandoffStrategy = null;
     private Integer hintPrefListSize = null;
     private List<String> owners = null;
+    private Quota diskQuota = null;
 
     public String getName() {
         return Utils.notNull(name);
@@ -273,6 +275,15 @@ public class StoreDefinitionBuilder {
         return this;
     }
 
+    public Quota getDiskQuota() {
+        return diskQuota;
+    }
+
+    public StoreDefinitionBuilder setDiskQuota(Quota diskQuota) {
+        this.diskQuota = diskQuota;
+        return this;
+    }
+
     public StoreDefinition build() {
         return new StoreDefinition(this.getName(),
                                    this.getType(),
@@ -297,6 +308,7 @@ public class StoreDefinitionBuilder {
                                    this.getSerializerFactory(),
                                    this.getHintedHandoffStrategy(),
                                    this.getHintPrefListSize(),
-                                   this.getOwners());
+                                   this.getOwners(),
+                                   this.getDiskQuota());
     }
 }

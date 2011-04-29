@@ -22,6 +22,7 @@ import java.util.List;
 
 import voldemort.client.RoutingTier;
 import voldemort.serialization.SerializerDefinition;
+import voldemort.store.quota.Quota;
 import voldemort.store.slop.strategy.HintedHandoffStrategyType;
 import voldemort.utils.Utils;
 
@@ -60,6 +61,7 @@ public class StoreDefinition implements Serializable {
     private final HintedHandoffStrategyType hintedHandoffStrategyType;
     private final Integer hintPrefListSize;
     private final List<String> owners;
+    private final Quota diskQuota;
 
     public StoreDefinition(String name,
                            String type,
@@ -84,7 +86,8 @@ public class StoreDefinition implements Serializable {
                            String factory,
                            HintedHandoffStrategyType hintedHandoffStrategyType,
                            Integer hintPrefListSize,
-                           List<String> owners) {
+                           List<String> owners,
+                           Quota diskQuota) {
         this.name = Utils.notNull(name);
         this.type = Utils.notNull(type);
         this.description = description;
@@ -109,6 +112,7 @@ public class StoreDefinition implements Serializable {
         this.hintedHandoffStrategyType = hintedHandoffStrategyType;
         this.hintPrefListSize = hintPrefListSize;
         this.owners = owners;
+        this.diskQuota = diskQuota;
         checkParameterLegality();
     }
 
@@ -329,6 +333,10 @@ public class StoreDefinition implements Serializable {
         return this.owners;
     }
 
+    public Quota getDiskQuota() {
+        return this.diskQuota;
+    }
+
     @Override
     public boolean equals(Object o) {
         if(this == o)
@@ -402,7 +410,8 @@ public class StoreDefinition implements Serializable {
                                 hasHintedHandoffStrategyType() ? getHintedHandoffStrategyType()
                                                               : null,
                                 hasHintPreflistSize() ? getHintPrefListSize() : null,
-                                getOwners());
+                                getOwners(),
+                                getDiskQuota());
     }
 
     @Override
@@ -421,6 +430,7 @@ public class StoreDefinition implements Serializable {
                + getZoneCountWrites() + ", serializer factory = " + getSerializerFactory() + ")"
                + ", hinted-handoff-strategy = " + getHintedHandoffStrategyType()
                + ", hint-preflist-size = " + getHintPrefListSize() + ", owners = " + getOwners()
+               + ", disk-quota = " + getDiskQuota()
                + ")";
     }
 }
