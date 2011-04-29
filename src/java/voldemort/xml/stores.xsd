@@ -44,8 +44,16 @@
 				minOccurs="0" maxOccurs="1" />
 			<xs:element name="retention-scan-throttle-rate" type="xs:nonNegativeInteger"
 				minOccurs="0" maxOccurs="1" />
+            <xs:element name="disk-quota" minOccurs="0" maxOccurs="1" type="quota" />
 		</xs:all>
 	</xs:complexType>
+
+    <xs:complexType name="quota">
+        <xs:all>
+            <xs:element name="hard-limit" type="xs:nonNegativeInteger" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="soft-limit" type="xs:nonNegativeInteger" minOccurs="1" maxOccurs="1"/>
+        </xs:all>
+    </xs:complexType>
 
 	<!-- Zone replication factor -->
 	<xs:complexType name="zone-replication-factor">
