@@ -17,7 +17,7 @@ public class Quota {
         return softLimit;
     }
 
-    public long hardLimit() {
+    public long getHardLimit() {
         return hardLimit;
     }
 
