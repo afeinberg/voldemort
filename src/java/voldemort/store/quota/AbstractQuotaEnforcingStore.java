@@ -1,6 +1,5 @@
 package voldemort.store.quota;
 
-import voldemort.VoldemortException;
 import voldemort.store.DelegatingStore;
 import voldemort.store.StorageEngine;
 import voldemort.utils.ClosableIterator;
@@ -99,16 +98,6 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
      */
     public void setEnforceQuota(boolean enforceQuota) {
         this.enforceQuota = enforceQuota;
-    }
-
-    @Override
-    public void put(K key, Versioned<V> value, T transform) throws VoldemortException {
-        if(isQuotaEnforced()) {
-            if(isHardLimitExceeded())
-                throw new QuotaExceededException("Quota " + quota + " exceeded");
-        }
-
-        getInnerStore().put(key, value, transform);
     }
 
     public StorageEngine<K, V, T> getInnerStorageEngine() {
