@@ -35,6 +35,7 @@ import voldemort.store.StorageInitializationException;
 import voldemort.store.Store;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.quota.QuotaUtils;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
 import voldemort.utils.ClosableIterator;
@@ -178,7 +179,7 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
     }
 
     public long diskUtilization() {
-        throw new VoldemortException("DiskUtilization not supported in BdbStorageEngine");
+        return QuotaUtils.diskUtilization(environment.getHome().getAbsolutePath());
     }
 
     private void commitOrAbort(boolean succeeded, Transaction transaction) {
