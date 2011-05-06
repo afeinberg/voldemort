@@ -2,6 +2,7 @@ package voldemort.store.quota;
 
 
 import voldemort.VoldemortException;
+import voldemort.annotations.jmx.JmxGetter;
 import voldemort.store.StorageEngine;
 import voldemort.versioning.Versioned;
 
@@ -14,6 +15,11 @@ public class DiskQuotaEnforcingStore<K, V, T> extends AbstractQuotaEnforcingStor
                                    Quota quota) {
         super(innerStorageEngine, action, quota);
         this.diskUtilization = 0;
+    }
+
+    @JmxGetter(name = "DiskUtilization", description = "Disk utilization in bytes")
+    public long getDiskUtilization() {
+        return diskUtilization;
     }
 
     @Override
