@@ -49,6 +49,7 @@ import voldemort.serialization.SerializerDefinition;
 import voldemort.store.StoreDefinition;
 import voldemort.store.StoreDefinitionBuilder;
 import voldemort.store.StoreUtils;
+import voldemort.store.quota.Quota;
 import voldemort.store.slop.strategy.HintedHandoffStrategyType;
 import voldemort.store.views.ViewStorageConfiguration;
 import voldemort.utils.Utils;
@@ -76,10 +77,13 @@ public class StoreDefinitionsMapper {
     public final static String STORE_COMPRESSION_ELMT = "compression";
     public final static String STORE_COMPRESSION_TYPE_ELMT = "type";
     public final static String STORE_COMPRESSION_OPTIONS_ELMT = "options";
+    public final static String STORE_DISK_QUOTA_ELMT = "disk-quota";
     public final static String STORE_ROUTING_TIER_ELMT = "routing";
     public final static String STORE_REPLICATION_FACTOR_ELMT = "replication-factor";
     public final static String STORE_REQUIRED_WRITES_ELMT = "required-writes";
     public final static String STORE_PREFERRED_WRITES_ELMT = "preferred-writes";
+    public final static String STORE_QUOTA_HARD_LIMIT_ELMT = "hard-limit";
+    public final static String STORE_QUOTA_SOFT_LIMIT_ELMT = "soft-limit";
     public final static String STORE_REQUIRED_READS_ELMT = "required-reads";
     public final static String STORE_PREFERRED_READS_ELMT = "preferred-reads";
     public final static String STORE_RETENTION_POLICY_ELMT = "retention-days";
@@ -248,6 +252,15 @@ public class StoreDefinitionsMapper {
         Integer hintPrefListSize = (null != hintPrefListSizeStr) ? Integer.parseInt(hintPrefListSizeStr)
                                                                 : null;
 
+        Quota diskQuota = null;
+        Element diskQuotaElement = store.getChild(STORE_DISK_QUOTA_ELMT);
+        if(diskQuotaElement != null) {
+            String hardLimitStr = diskQuotaElement.getChildText(STORE_QUOTA_HARD_LIMIT_ELMT);
+            String softLimitStr = diskQuotaElement.getChildText(STORE_QUOTA_SOFT_LIMIT_ELMT);
+            diskQuota = new Quota(Long.parseLong(softLimitStr),
+                                  Long.parseLong(hardLimitStr));
+        }
+
         return new StoreDefinitionBuilder().setName(name)
                                            .setType(storeType)
                                            .setDescription(description)
@@ -268,6 +281,7 @@ public class StoreDefinitionsMapper {
                                            .setZoneCountWrites(zoneCountWrites)
                                            .setHintedHandoffStrategy(hintedHandoffStrategy)
                                            .setHintPrefListSize(hintPrefListSize)
+                                           .setDiskQuota(diskQuota)
                                            .build();
     }
 
@@ -445,6 +459,15 @@ public class StoreDefinitionsMapper {
                                                                                          .toDisplay()));
         if(storeDefinition.hasHintPreflistSize())
             store.addContent(new Element(HINT_PREFLIST_SIZE).setText(Integer.toString(storeDefinition.getHintPrefListSize())));
+
+        if(storeDefinition.hasDiskQuota()) {
+            long hardLimit = storeDefinition.getDiskQuota().getHardLimit();
+            long softLimit = storeDefinition.getDiskQuota().getSoftLimit();
+            Element diskQuota = new Element(STORE_DISK_QUOTA_ELMT);
+            diskQuota.addContent(new Element(STORE_QUOTA_HARD_LIMIT_ELMT).setText(Long.toString(hardLimit)));
+            diskQuota.addContent(new Element(STORE_QUOTA_SOFT_LIMIT_ELMT).setText(Long.toString(softLimit)));
+            store.addContent(diskQuota);
+        }
 
         Element keySerializer = new Element(STORE_KEY_SERIALIZER_ELMT);
         addSerializer(keySerializer, storeDefinition.getKeySerializer());

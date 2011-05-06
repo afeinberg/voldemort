@@ -337,6 +337,10 @@ public class StoreDefinition implements Serializable {
         return this.diskQuota;
     }
 
+    public boolean hasDiskQuota() {
+        return diskQuota != null;
+    }
+
     @Override
     public boolean equals(Object o) {
         if(this == o)
