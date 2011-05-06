@@ -1,5 +1,7 @@
 package voldemort.store.quota;
 
+import voldemort.annotations.jmx.JmxGetter;
+import voldemort.annotations.jmx.JmxOperation;
 import voldemort.store.DelegatingStore;
 import voldemort.store.StorageEngine;
 import voldemort.utils.ClosableIterator;
@@ -50,6 +52,15 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
      */
     public abstract void computeQuotas();
 
+    @JmxGetter(name = "HardLimit", description = "Hard quota")
+    public long getHardLimit() {
+        return getQuota().getHardLimit();
+    }
+
+    @JmxGetter(name = "SoftLimit", description = "Soft quota")
+    public long getSoftLimit() {
+        return getQuota().getSoftLimit();
+    }
 
     /**
      * Verify quotas:
@@ -86,6 +97,7 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
      *
      * @return True if quotas are enforced
      */
+    @JmxGetter(name = "QuotaEnforce", description = "Is the quota enforced?")
     public boolean isQuotaEnforced() {
         return enforceQuota;
     }
@@ -96,6 +108,7 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
      *
      * @param enforceQuota Should quotas be enforced
      */
+    @JmxOperation(description = "Enable or disable quota enforcement")
     public void setEnforceQuota(boolean enforceQuota) {
         this.enforceQuota = enforceQuota;
     }
