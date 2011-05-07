@@ -69,6 +69,11 @@ import voldemort.store.logging.LoggingStore;
 import voldemort.store.metadata.MetadataStore;
 import voldemort.store.metadata.MetadataStoreListener;
 import voldemort.store.nonblockingstore.NonblockingStore;
+import voldemort.store.quota.DiskQuotaEnforcingStore;
+import voldemort.store.quota.Quota;
+import voldemort.store.quota.QuotaAction;
+import voldemort.store.quota.QuotaStatusJmx;
+import voldemort.store.quota.ViolatorTrackingAction;
 import voldemort.store.readonly.ReadOnlyStorageConfiguration;
 import voldemort.store.readonly.ReadOnlyStorageEngine;
 import voldemort.store.rebalancing.RebootstrappingStore;
@@ -121,6 +126,7 @@ public class StorageService extends AbstractService {
     private final FailureDetector failureDetector;
     private final StoreStats storeStats;
     private final RoutedStoreFactory routedStoreFactory;
+    private final QuotaStatusJmx diskQuotaStatusJmx;
 
     public StorageService(StoreRepository storeRepository,
                           MetadataStore metadata,
@@ -153,6 +159,7 @@ public class StorageService extends AbstractService {
         this.routedStoreFactory = new RoutedStoreFactory(voldemortConfig.isPipelineRoutedStoreEnabled(),
                                                          this.clientThreadPool,
                                                          voldemortConfig.getClientRoutingTimeoutMs());
+        this.diskQuotaStatusJmx = new QuotaStatusJmx("Disk quota");
     }
 
     private void initStorageConfig(String configClassName) {
@@ -309,6 +316,15 @@ public class StorageService extends AbstractService {
             unregisterEngine(engine, isReadOnly, storeDef.getType());
             throw new VoldemortException(e);
         }
+    }
+
+    public <K, V, T> DiskQuotaEnforcingStore<K, V, T> createDiskQuotaEnforcingStore(StorageEngine<K, V, T> storageEngine,
+                                                                                    Quota quota) {
+        QuotaAction quotaAction = new ViolatorTrackingAction(diskQuotaStatusJmx,
+                                                             storageEngine.getName());
+        return new DiskQuotaEnforcingStore<K, V, T>(storageEngine,
+                                                    quotaAction,
+                                                    quota);
     }
 
     /**
