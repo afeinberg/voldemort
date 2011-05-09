@@ -69,6 +69,7 @@ import voldemort.store.logging.LoggingStore;
 import voldemort.store.metadata.MetadataStore;
 import voldemort.store.metadata.MetadataStoreListener;
 import voldemort.store.nonblockingstore.NonblockingStore;
+import voldemort.store.quota.AbstractQuotaEnforcingStore;
 import voldemort.store.quota.DiskQuotaEnforcingStore;
 import voldemort.store.quota.Quota;
 import voldemort.store.quota.QuotaAction;
@@ -304,16 +305,25 @@ public class StorageService extends AbstractService {
         }
 
         // openStore() should have atomic semantics
+        StorageEngine<ByteArray, byte[], byte[]> mutableEngine = engine;
         try {
-            registerEngine(engine, isReadOnly, storeDef.getType());
+            DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> enforcingStore = null;
+            if(storeDef.hasDiskQuota()) {
+                enforcingStore = createDiskQuotaEnforcingStore(engine, storeDef.getDiskQuota());
+                mutableEngine = enforcingStore;
+            }
+            registerEngine(mutableEngine, isReadOnly, storeDef.getType());
 
             if(voldemortConfig.isServerRoutingEnabled())
                 registerNodeStores(storeDef, metadata.getCluster(), voldemortConfig.getNodeId());
 
             if(storeDef.hasRetentionPeriod())
-                scheduleCleanupJob(storeDef, engine);
+                scheduleCleanupJob(storeDef, mutableEngine);
+
+            if(null != enforcingStore)
+                scheduleQuotaVerificationJob(storeDef, enforcingStore);
         } catch(Exception e) {
-            unregisterEngine(engine, isReadOnly, storeDef.getType());
+            unregisterEngine(mutableEngine, isReadOnly, storeDef.getType());
             throw new VoldemortException(e);
         }
     }
@@ -529,6 +539,11 @@ public class StorageService extends AbstractService {
                                    node.getSocketPort(),
                                    voldemortConfig.getRequestFormatType(),
                                    RequestRoutingType.NORMAL);
+    }
+
+    private void scheduleQuotaVerificationJob(StoreDefinition storeDef,
+                                              AbstractQuotaEnforcingStore<ByteArray, byte[], byte[]> store) {
+        // TODO: implement
     }
 
     /**
