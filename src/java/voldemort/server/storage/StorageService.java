@@ -274,6 +274,12 @@ public class StorageService extends AbstractService {
                                    JmxUtils.createObjectName("voldemort.store.stats.aggregate",
                                                              "aggregate-perf"));
 
+        // enable quota status jmx
+        if(voldemortConfig.isQuotaEnabled())
+            JmxUtils.registerMbean(diskQuotaStatusJmx,
+                                   JmxUtils.createObjectName("voldemort.store.quota",
+                                                             "disk-quota"));
+
         logger.info("All stores initialized.");
     }
 
