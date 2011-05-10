@@ -134,6 +134,10 @@ public class VoldemortConfig implements Serializable {
     private boolean enableRebalanceService;
     private boolean enableGrandfather;
 
+    private boolean enableQuota;
+    private boolean enforceQuota;
+    private long quotaVerificationFrequencyMs;
+
     private List<String> storageConfigurations;
 
     private Props allProps;
@@ -281,6 +285,10 @@ public class VoldemortConfig implements Serializable {
         this.enableRebalanceService = props.getBoolean("enable.rebalancing", true);
         this.enableGrandfather = props.getBoolean("enable.grandfather", true);
         this.enableRepair = props.getBoolean("enable.repair", false);
+
+        this.enableQuota = props.getBoolean("quota.enable", false);
+        this.enforceQuota = props.getBoolean("quota.enforce", false);
+        this.quotaVerificationFrequencyMs = props.getLong("quota.frequency.ms", 60 * 1000);
 
         this.gossipInterval = props.getInt("gossip.interval.ms", 30 * 1000);
 
@@ -1403,6 +1411,26 @@ public class VoldemortConfig implements Serializable {
 
     public void setMaxParallelStoresRebalancing(int maxParallelStoresRebalancing) {
         this.maxParallelStoresRebalancing = maxParallelStoresRebalancing;
+    }
+
+    public boolean isQuotaEnabled() {
+        return enableQuota;
+    }
+
+    public void setEnableQuota(boolean enableQuota) {
+        this.enableQuota = enableQuota;
+    }
+
+    public boolean isQuotaEnforced() {
+        return enforceQuota;
+    }
+
+    public void setEnforceQuota(boolean enforceQuota) {
+        this.enforceQuota = enforceQuota;
+    }
+
+    public long getQuotaVerificationFrequencyMs() {
+        return quotaVerificationFrequencyMs;
     }
 
 }

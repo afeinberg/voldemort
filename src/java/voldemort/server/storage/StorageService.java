@@ -57,6 +57,7 @@ import voldemort.server.StoreRepository;
 import voldemort.server.VoldemortConfig;
 import voldemort.server.scheduler.DataCleanupJob;
 import voldemort.server.scheduler.SchedulerService;
+import voldemort.server.scheduler.quota.QuotaVerificationJob;
 import voldemort.server.scheduler.slop.BlockingSlopPusherJob;
 import voldemort.server.scheduler.slop.RepairJob;
 import voldemort.server.scheduler.slop.StreamingSlopPusherJob;
@@ -311,8 +312,9 @@ public class StorageService extends AbstractService {
         StorageEngine<ByteArray, byte[], byte[]> mutableEngine = engine;
         try {
             DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> enforcingStore = null;
-            if(storeDef.hasDiskQuota()) {
+            if(voldemortConfig.isQuotaEnabled() && storeDef.hasDiskQuota()) {
                 enforcingStore = createDiskQuotaEnforcingStore(engine, storeDef.getDiskQuota());
+                enforcingStore.setEnforceQuota(voldemortConfig.isQuotaEnforced());
                 mutableEngine = enforcingStore;
             }
             registerEngine(mutableEngine);
@@ -324,7 +326,7 @@ public class StorageService extends AbstractService {
                 scheduleCleanupJob(storeDef, mutableEngine);
 
             if(null != enforcingStore)
-                scheduleQuotaVerificationJob(storeDef, enforcingStore);
+                scheduleQuotaVerificationJob(storeDef.getDiskQuota(), "disk", enforcingStore);
         } catch(Exception e) {
             unregisterEngine(storeDef.getName(), storeDef.getType(), mutableEngine);
             throw new VoldemortException(e);
@@ -514,9 +516,20 @@ public class StorageService extends AbstractService {
                                    RequestRoutingType.NORMAL);
     }
 
-    private void scheduleQuotaVerificationJob(StoreDefinition storeDef,
+    private void scheduleQuotaVerificationJob(Quota quota,
+                                              String description,
                                               AbstractQuotaEnforcingStore<ByteArray, byte[], byte[]> store) {
-        // TODO: implement
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.add(Calendar.SECOND,
+                (int) (voldemortConfig.getQuotaVerificationFrequencyMs() / Time.MS_PER_SECOND));
+        Date nextRun = cal.getTime();
+        logger.info("Initializing quota verification job for " + store.getName()
+                    + " at " + nextRun);
+        scheduler.schedule("quota-verification",
+                           new QuotaVerificationJob<ByteArray, byte[], byte[]>(store,
+                                                                               description),
+                           nextRun,
+                           voldemortConfig.getQuotaVerificationFrequencyMs());
     }
 
     /**
