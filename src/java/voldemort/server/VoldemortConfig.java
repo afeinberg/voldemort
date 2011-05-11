@@ -1433,4 +1433,8 @@ public class VoldemortConfig implements Serializable {
         return quotaVerificationFrequencyMs;
     }
 
+    public void setQuotaVerificationFrequencyMs(long quotaVerificationFrequencyMs) {
+        this.quotaVerificationFrequencyMs = quotaVerificationFrequencyMs;
+    }
+
 }
