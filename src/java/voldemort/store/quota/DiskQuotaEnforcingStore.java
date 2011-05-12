@@ -1,12 +1,15 @@
 package voldemort.store.quota;
 
 
+import org.apache.log4j.Logger;
 import voldemort.VoldemortException;
 import voldemort.annotations.jmx.JmxGetter;
 import voldemort.store.StorageEngine;
 import voldemort.versioning.Versioned;
 
 public class DiskQuotaEnforcingStore<K, V, T> extends AbstractQuotaEnforcingStore<K, V, T> {
+
+    private static final Logger logger = Logger.getLogger(DiskQuotaEnforcingStore.class);
 
     private volatile long diskUtilization;
 
@@ -44,5 +47,6 @@ public class DiskQuotaEnforcingStore<K, V, T> extends AbstractQuotaEnforcingStor
     @Override
     public void computeQuotas() {
         diskUtilization = diskUtilization();
+        logger.info("Computed disk utilization: " + diskUtilization);
     }
 }

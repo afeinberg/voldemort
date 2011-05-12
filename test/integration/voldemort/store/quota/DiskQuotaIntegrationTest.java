@@ -9,15 +9,20 @@ import voldemort.client.ClientConfig;
 import voldemort.client.SocketStoreClientFactory;
 import voldemort.client.StoreClient;
 import voldemort.client.StoreClientFactory;
+import voldemort.client.protocol.admin.AdminClient;
+import voldemort.client.protocol.admin.AdminClientConfig;
 import voldemort.cluster.Cluster;
+import voldemort.cluster.Node;
 import voldemort.server.VoldemortConfig;
 import voldemort.server.VoldemortServer;
 import voldemort.server.VoldemortService;
 import voldemort.server.storage.StorageService;
+import voldemort.store.StoreDefinition;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.Assert.*;
@@ -52,7 +57,13 @@ public class DiskQuotaIntegrationTest {
             config.setEnableQuota(true);
             config.setEnforceQuota(true);
             config.setQuotaVerificationFrequencyMs(10000);
+            config.setBdbMaxLogFileSize(1000000);
+            config.setBdbCleanerThreads(11);
+            config.setBdbCleanerMinUtilization(90);
+            config.setBdbCleanerMinFileUtilization(50);
+            config.setBdbOneEnvPerStore(true);
             config.setBdbCheckpointMs(1000);
+            config.setBdbCheckpointBytes(4096);
         }
         cluster = ServerTestUtils.getLocalCluster(2, new int [][] { { 0, 2 },  { 1, 3 } });
 
@@ -88,7 +99,7 @@ public class DiskQuotaIntegrationTest {
 
     @Test
     public void testSoftLimitViolation() throws Exception {
-        for(int i = 0; i < 500; i++) {
+        for(int i = 0; i < 40000; i++) {
             client.put("k" + i, "v" + i);
         }
         Thread.sleep(10000);
@@ -101,13 +112,22 @@ public class DiskQuotaIntegrationTest {
     }
 
     @Test
-    public void testHardLimitViolation() {
-
+    public void testHardLimitViolation() throws Exception {
+        boolean exceptionCaught = false;
+        try {
+            client.put("foo", "bar");
+            for(int i = 0; i < 100000; i++) {
+                client.put("k" + i, "v" + i);
+            }
+        } catch(DiskQuotaExceedException e) {
+            exceptionCaught = true;
+        }
+        assertTrue("caught DiskQuotaExceedException", exceptionCaught);
     }
 
     @Test
     public void testSoftLimitRecovery() throws Exception {
-        for(int i = 0; i < 500; i++) {
+        for(int i = 0; i < 40000; i++) {
             client.put("k" + i, "v" + i);
         }
         Thread.sleep(10000);
@@ -115,17 +135,47 @@ public class DiskQuotaIntegrationTest {
         QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
         assertTrue("soft limit violation caught",
                    quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
-        for(int i = 0; i < 500; i++) {
-            client.delete("k" + i);
-        }
-        Thread.sleep(10000);
+        truncateStore();
+        Thread.sleep(25000);
         assertFalse("recovered from soft limit violation",
                     quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
     }
 
     @Test
     public void testHardLimitRecovery() throws Exception {
+        boolean exceptionCaught = false;
+        try {
+            client.put("foo", "bar");
+            for(int i = 0; i < 100000; i++) {
+                client.put("k" + i, "v" + i);
+            }
+        } catch(DiskQuotaExceedException e) {
+            exceptionCaught = true;
+        }
+        assertTrue("caught DiskQuotaExceedException", exceptionCaught);
+        truncateStore();
+        Thread.sleep(25000);
+        StorageService storageService = getStorageService();
+        QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
+        assertFalse("recovered from soft limit violation",
+                    quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
+         assertFalse("recovered from hard limit violation",
+                    quotaStatusJmx.getHardLimitViolators().contains(STORE_NAME));
+        client.put("foo", "bar");
+        assertEquals("put goes through successfully", client.get("foo").getValue(), "bar");
+    }
 
+    private void truncateStore() {
+        AdminClientConfig adminClientConfig = new AdminClientConfig();
+
+        for(Node node: cluster.getNodes()) {
+            int nodeId = node.getId();
+            AdminClient adminClient = new AdminClient(cluster.getNodeById(nodeId)
+                                                             .getSocketUrl()
+                                                             .toString(),
+                                                      adminClientConfig);
+            adminClient.truncate(nodeId, STORE_NAME);
+        }
     }
 
     private StorageService getStorageService() {
