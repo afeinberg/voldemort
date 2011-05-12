@@ -99,7 +99,7 @@ public class DiskQuotaIntegrationTest {
 
     @Test
     public void testSoftLimitViolation() throws Exception {
-        for(int i = 0; i < 40000; i++) {
+        for(int i = 0; i < 42500; i++) {
             client.put("k" + i, "v" + i);
         }
         Thread.sleep(10000);
@@ -127,16 +127,16 @@ public class DiskQuotaIntegrationTest {
 
     @Test
     public void testSoftLimitRecovery() throws Exception {
-        for(int i = 0; i < 40000; i++) {
+        for(int i = 0; i < 42500; i++) {
             client.put("k" + i, "v" + i);
         }
-        Thread.sleep(10000);
+        Thread.sleep(5000);
         StorageService storageService = getStorageService();
         QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
         assertTrue("soft limit violation caught",
                    quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
         truncateStore();
-        Thread.sleep(25000);
+        Thread.sleep(30000);
         assertFalse("recovered from soft limit violation",
                     quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
     }
@@ -154,13 +154,13 @@ public class DiskQuotaIntegrationTest {
         }
         assertTrue("caught DiskQuotaExceedException", exceptionCaught);
         truncateStore();
-        Thread.sleep(25000);
+        Thread.sleep(30000);
         StorageService storageService = getStorageService();
         QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
+        assertFalse("recovered from hard limit violation",
+                    quotaStatusJmx.getHardLimitViolators().contains(STORE_NAME));
         assertFalse("recovered from soft limit violation",
                     quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
-         assertFalse("recovered from hard limit violation",
-                    quotaStatusJmx.getHardLimitViolators().contains(STORE_NAME));
         client.put("foo", "bar");
         assertEquals("put goes through successfully", client.get("foo").getValue(), "bar");
     }

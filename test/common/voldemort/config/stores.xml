@@ -203,7 +203,7 @@
       <schema-info>UTF-8</schema-info>
     </value-serializer>
     <disk-quota>
-      <soft-limit>1800000</soft-limit>
+      <soft-limit>2200000</soft-limit>
       <hard-limit>10000000</hard-limit>
     </disk-quota>
   </store>
