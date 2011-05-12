@@ -52,6 +52,7 @@ public class DiskQuotaIntegrationTest {
             config.setEnableQuota(true);
             config.setEnforceQuota(true);
             config.setQuotaVerificationFrequencyMs(10000);
+            config.setBdbCheckpointMs(1000);
         }
         cluster = ServerTestUtils.getLocalCluster(2, new int [][] { { 0, 2 },  { 1, 3 } });
 
@@ -95,6 +96,8 @@ public class DiskQuotaIntegrationTest {
         QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
         assertTrue("soft limit violation caught",
                    quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
+        client.put("foo", "bar");
+        assertEquals("put goes through successfully", client.get("foo").getValue(), "bar");
     }
 
     @Test
@@ -103,7 +106,25 @@ public class DiskQuotaIntegrationTest {
     }
 
     @Test
-    public void testRecovery() {
+    public void testSoftLimitRecovery() throws Exception {
+        for(int i = 0; i < 500; i++) {
+            client.put("k" + i, "v" + i);
+        }
+        Thread.sleep(10000);
+        StorageService storageService = getStorageService();
+        QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
+        assertTrue("soft limit violation caught",
+                   quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
+        for(int i = 0; i < 500; i++) {
+            client.delete("k" + i);
+        }
+        Thread.sleep(10000);
+        assertFalse("recovered from soft limit violation",
+                    quotaStatusJmx.getSoftLimitViolators().contains(STORE_NAME));
+    }
+
+    @Test
+    public void testHardLimitRecovery() throws Exception {
 
     }
 
