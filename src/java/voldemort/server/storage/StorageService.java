@@ -819,4 +819,8 @@ public class StorageService extends AbstractService {
         return storeFactory;
     }
 
+    public QuotaStatusJmx getDiskQuotaStatusJmx() {
+          return diskQuotaStatusJmx;
+      }
+
 }
