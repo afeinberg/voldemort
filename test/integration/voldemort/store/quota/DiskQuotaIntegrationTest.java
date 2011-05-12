@@ -17,12 +17,10 @@ import voldemort.server.VoldemortConfig;
 import voldemort.server.VoldemortServer;
 import voldemort.server.VoldemortService;
 import voldemort.server.storage.StorageService;
-import voldemort.store.StoreDefinition;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Properties;
 
 import static org.junit.Assert.*;
@@ -119,10 +117,10 @@ public class DiskQuotaIntegrationTest {
             for(int i = 0; i < 100000; i++) {
                 client.put("k" + i, "v" + i);
             }
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionCaught = true;
         }
-        assertTrue("caught DiskQuotaExceedException", exceptionCaught);
+        assertTrue("caught DiskQuotaExceededException", exceptionCaught);
     }
 
     @Test
@@ -149,10 +147,10 @@ public class DiskQuotaIntegrationTest {
             for(int i = 0; i < 100000; i++) {
                 client.put("k" + i, "v" + i);
             }
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionCaught = true;
         }
-        assertTrue("caught DiskQuotaExceedException", exceptionCaught);
+        assertTrue("caught DiskQuotaExceededException", exceptionCaught);
         truncateStore();
         Thread.sleep(30000);
         StorageService storageService = getStorageService();

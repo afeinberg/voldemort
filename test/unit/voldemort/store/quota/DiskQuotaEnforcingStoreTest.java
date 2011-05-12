@@ -90,7 +90,7 @@ public class DiskQuotaEnforcingStoreTest {
         boolean exceptionThrown = false;
         try {
             quotaStore.put("c", new Versioned<String>("1"), null);
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionThrown = true;
         }
 
@@ -112,7 +112,7 @@ public class DiskQuotaEnforcingStoreTest {
         boolean exceptionThrown = false;
         try {
             quotaStore.put("c", new Versioned<String>("1"), null);
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionThrown = true;
         }
 
@@ -130,7 +130,7 @@ public class DiskQuotaEnforcingStoreTest {
         boolean exceptionThrown = false;
         try {
             quotaStore.put("c", new Versioned<String>("1"), null);
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionThrown = true;
         }
 
@@ -140,7 +140,7 @@ public class DiskQuotaEnforcingStoreTest {
         exceptionThrown = false;
         try {
             quotaStore.put("c", new Versioned<String>("1"), null);
-        } catch(DiskQuotaExceedException e) {
+        } catch(DiskQuotaExceededException e) {
             exceptionThrown = true;
         }
 
