@@ -60,7 +60,7 @@ public class DiskQuotaIntegrationTest {
             config.setBdbCleanerMinUtilization(90);
             config.setBdbCleanerMinFileUtilization(50);
             config.setBdbOneEnvPerStore(true);
-            config.setBdbCheckpointMs(1000);
+            config.setBdbCheckpointMs(500);
             config.setBdbCheckpointBytes(4096);
         }
         cluster = ServerTestUtils.getLocalCluster(2, new int [][] { { 0, 2 },  { 1, 3 } });
@@ -152,7 +152,7 @@ public class DiskQuotaIntegrationTest {
         }
         assertTrue("caught DiskQuotaExceededException", exceptionCaught);
         truncateStore();
-        Thread.sleep(30000);
+        Thread.sleep(50000);
         StorageService storageService = getStorageService();
         QuotaStatusJmx quotaStatusJmx = storageService.getDiskQuotaStatusJmx();
         assertFalse("recovered from hard limit violation",
