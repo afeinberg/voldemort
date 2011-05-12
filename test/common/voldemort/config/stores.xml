@@ -202,10 +202,10 @@
       <type>string</type>
       <schema-info>UTF-8</schema-info>
     </value-serializer>
-    <quota>
+    <disk-quota>
       <soft-limit>1000</soft-limit>
-      <hard-limit>2000</hard-limit>
-    </quota>
+      <hard-limit>2000000</hard-limit>
+    </disk-quota>
   </store>
 
 </stores>
