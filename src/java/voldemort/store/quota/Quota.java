@@ -34,6 +34,15 @@ public class Quota {
         return true;
     }
 
+    /**
+     * Calculate a per node quota from a cluster wide quota
+     * @param numNodes Number of nodes in the cluster
+     * @return Per node quota
+     */
+    public Quota perNodeQuota(int numNodes) {
+        return new Quota(softLimit / numNodes, hardLimit / numNodes);
+    }
+
     @Override
     public int hashCode() {
         int result = (int) (softLimit ^ (softLimit >>> 32));

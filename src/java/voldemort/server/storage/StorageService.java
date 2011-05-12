@@ -341,11 +341,13 @@ public class StorageService extends AbstractService {
 
     public <K, V, T> DiskQuotaEnforcingStore<K, V, T> createDiskQuotaEnforcingStore(StorageEngine<K, V, T> storageEngine,
                                                                                     Quota quota) {
+
         QuotaAction quotaAction = new ViolatorTrackingAction(diskQuotaStatusJmx,
                                                              storageEngine.getName());
         return new DiskQuotaEnforcingStore<K, V, T>(storageEngine,
                                                     quotaAction,
-                                                    quota);
+                                                    quota.perNodeQuota(metadata.getCluster()
+                                                                               .getNumberOfNodes()));
     }
 
     /**
