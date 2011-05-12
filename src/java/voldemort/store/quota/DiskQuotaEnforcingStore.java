@@ -28,7 +28,7 @@ public class DiskQuotaEnforcingStore<K, V, T> extends AbstractQuotaEnforcingStor
     @Override
     public void put(K key, Versioned<V> value, T transform) throws VoldemortException {
         if(isQuotaEnforced() && isHardLimitExceeded())
-            throw new DiskQuotaExceedException("Hard limit is " + getQuota().getHardLimit()
+            throw new DiskQuotaExceededException("Hard limit is " + getQuota().getHardLimit()
                                                + " current utilization is " + diskUtilization);
 
         getInnerStore().put(key, value, transform);

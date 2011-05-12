@@ -23,7 +23,7 @@ import voldemort.VoldemortApplicationException;
 import voldemort.VoldemortException;
 import voldemort.server.rebalance.AlreadyRebalancingException;
 import voldemort.server.rebalance.VoldemortRebalancingException;
-import voldemort.store.quota.DiskQuotaExceedException;
+import voldemort.store.quota.DiskQuotaExceededException;
 import voldemort.store.rebalancing.ProxyUnreachableException;
 import voldemort.store.views.UnsupportedViewOperationException;
 import voldemort.utils.ReflectUtils;
@@ -57,7 +57,7 @@ public class ErrorCodeMapper {
         codeToException.put((short) 13, AlreadyRebalancingException.class);
         codeToException.put((short) 14, VoldemortRebalancingException.class);
         codeToException.put((short) 15, ProxyUnreachableException.class);
-        codeToException.put((short) 16, DiskQuotaExceedException.class);
+        codeToException.put((short) 16, DiskQuotaExceededException.class);
 
         exceptionToCode = new HashMap<Class<? extends VoldemortException>, Short>();
         for(Map.Entry<Short, Class<? extends VoldemortException>> entry: codeToException.entrySet())

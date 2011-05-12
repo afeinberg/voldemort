@@ -1,14 +1,14 @@
 package voldemort.store.quota;
 
-public class DiskQuotaExceedException extends QuotaExceededException {
+public class DiskQuotaExceededException extends QuotaExceededException {
 
     private static final long serialVersionUID = 1L;
 
-    public DiskQuotaExceedException(String message) {
+    public DiskQuotaExceededException(String message) {
         super(message);
     }
 
-    public DiskQuotaExceedException(String message, Exception cause) {
+    public DiskQuotaExceededException(String message, Exception cause) {
         super(message, cause);
     }
 
