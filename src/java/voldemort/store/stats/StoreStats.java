@@ -19,14 +19,26 @@ public class StoreStats {
     }
 
     /**
+     * @param durationMS Specifies how long we're keeping the request
+     *        counter for
+     */
+    public StoreStats(int durationMS) {
+        this(null, durationMS);
+    }
+
+    /**
      * @param parent An optional parent stats object that will maintain
      *        aggregate data across many stores
      */
     public StoreStats(StoreStats parent) {
+        this(parent, 300000);
+    }
+
+    public StoreStats(StoreStats parent, int durationMS) {
         counters = new EnumMap<Tracked, RequestCounter>(Tracked.class);
 
         for(Tracked tracked: Tracked.values()) {
-            counters.put(tracked, new RequestCounter(300000));
+            counters.put(tracked, new RequestCounter(durationMS));
         }
         this.parent = parent;
     }
