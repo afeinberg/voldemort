@@ -383,7 +383,8 @@ public class StoreDefinition implements Serializable {
                                 def.getSerializerFactory() != null ? def.getSerializerFactory()
                                                                   : null)
                && Objects.equal(getHintedHandoffStrategyType(), def.getHintedHandoffStrategyType())
-               && Objects.equal(getHintPrefListSize(), def.getHintPrefListSize());
+               && Objects.equal(getHintPrefListSize(), def.getHintPrefListSize())
+               && Objects.equal(getDiskQuota(), def.getDiskQuota());
     }
 
     @Override
