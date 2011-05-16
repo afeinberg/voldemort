@@ -257,21 +257,7 @@ public class Props implements Map<String, String> {
             throw new UndefinedPropertyException(name);
 
         String bytes = get(name);
-        String bytesLc = bytes.toLowerCase().trim();
-        if(bytesLc.endsWith("kb"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 2)) * 1024;
-        else if(bytesLc.endsWith("k"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 1)) * 1024;
-        else if(bytesLc.endsWith("mb"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 2)) * 1024 * 1024;
-        else if(bytesLc.endsWith("m"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 1)) * 1024 * 1024;
-        else if(bytesLc.endsWith("gb"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 2)) * 1024 * 1024 * 1024;
-        else if(bytesLc.endsWith("g"))
-            return Long.parseLong(bytes.substring(0, bytes.length() - 1)) * 1024 * 1024 * 1024;
-        else
-            return Long.parseLong(bytes);
+        return Utils.parseBytes(bytes);
     }
 
     public List<String> getList(String key, List<String> defaultValue) {
