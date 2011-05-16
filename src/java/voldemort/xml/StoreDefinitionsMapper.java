@@ -257,8 +257,8 @@ public class StoreDefinitionsMapper {
         if(diskQuotaElement != null) {
             String hardLimitStr = diskQuotaElement.getChildText(STORE_QUOTA_HARD_LIMIT_ELMT);
             String softLimitStr = diskQuotaElement.getChildText(STORE_QUOTA_SOFT_LIMIT_ELMT);
-            diskQuota = new Quota(Long.parseLong(softLimitStr),
-                                  Long.parseLong(hardLimitStr));
+            diskQuota = new Quota(Utils.parseBytes(softLimitStr),
+                                  Utils.parseBytes(hardLimitStr));
         }
 
         return new StoreDefinitionBuilder().setName(name)
