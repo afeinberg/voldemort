@@ -237,7 +237,7 @@ public class HadoopStoreBuilderCollisionTest {
         File nodeFile = new File(outputDir, "node-0");
         File versionDir = new File(storeDir, "version-0");
         HdfsFetcher fetcher = new HdfsFetcher();
-        fetcher.fetch(nodeFile.getAbsolutePath(), versionDir.getAbsolutePath());
+        fetcher.fetch(nodeFile.getAbsolutePath(), versionDir.getAbsolutePath(), null);
 
         // Test if we work in the normal collision scenario open store
         ReadOnlyStorageEngine engine = new ReadOnlyStorageEngine(storeName,

@@ -271,8 +271,10 @@ public class ReadOnlyStoreManagementServlet extends HttpServlet {
             logger.info("Executing fetch of " + fetchUrl);
 
             try {
-                fetchDir = fileFetcher.fetch(fetchUrl, store.getStoreDirPath() + File.separator
-                                                       + "version-" + Long.toString(pushVersion));
+                fetchDir = fileFetcher.fetch(fetchUrl,
+                                             store.getStoreDirPath() + File.separator
+                                             + "version-" + Long.toString(pushVersion),
+                                             null);
 
                 if(fetchDir == null) {
                     throw new ServletException("File fetcher failed for " + fetchUrl

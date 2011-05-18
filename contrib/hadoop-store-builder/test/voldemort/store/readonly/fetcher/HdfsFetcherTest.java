@@ -16,7 +16,9 @@
 
 package voldemort.store.readonly.fetcher;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 
 import junit.framework.TestCase;
 
@@ -25,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 
 import voldemort.TestUtils;
 import voldemort.VoldemortException;
+import voldemort.store.quota.Quota;
 import voldemort.store.readonly.ReadOnlyStorageFormat;
 import voldemort.store.readonly.ReadOnlyStorageMetadata;
 import voldemort.store.readonly.checksum.CheckSum;
@@ -52,7 +55,8 @@ public class HdfsFetcherTest extends TestCase {
 
         HdfsFetcher fetcher = new HdfsFetcher();
         File fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                         testDestinationDirectory.getAbsolutePath() + "1");
+                                         testDestinationDirectory.getAbsolutePath() + "1",
+                                         null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "1");
@@ -62,7 +66,8 @@ public class HdfsFetcherTest extends TestCase {
         FileUtils.writeByteArrayToFile(metadataFile, TestUtils.randomBytes(100));
         try {
             fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                        testDestinationDirectory.getAbsolutePath() + "2");
+                                        testDestinationDirectory.getAbsolutePath() + "2",
+                                        null);
             fail("Should have thrown an exception since metadata file is corrupt");
         } catch(VoldemortException e) {}
         metadataFile.delete();
@@ -74,7 +79,8 @@ public class HdfsFetcherTest extends TestCase {
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
 
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "3");
+                                    testDestinationDirectory.getAbsolutePath() + "3",
+                                    null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "3");
@@ -84,7 +90,8 @@ public class HdfsFetcherTest extends TestCase {
         metadata.add(ReadOnlyStorageMetadata.CHECKSUM_TYPE, "blah");
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "4");
+                                    testDestinationDirectory.getAbsolutePath() + "4",
+                                    null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "4");
@@ -95,7 +102,8 @@ public class HdfsFetcherTest extends TestCase {
         metadata.add(ReadOnlyStorageMetadata.CHECKSUM, "1234");
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "5");
+                                    testDestinationDirectory.getAbsolutePath() + "5",
+                                    null);
         assertNull(fetchedFile);
         metadataFile.delete();
 
@@ -105,7 +113,8 @@ public class HdfsFetcherTest extends TestCase {
                                                                               CheckSumType.MD5))));
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "6");
+                                    testDestinationDirectory.getAbsolutePath() + "6",
+                                    null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "6");
@@ -117,7 +126,8 @@ public class HdfsFetcherTest extends TestCase {
                                                                               CheckSumType.ADLER32))));
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "7");
+                                    testDestinationDirectory.getAbsolutePath() + "7",
+                                    null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "7");
@@ -129,7 +139,8 @@ public class HdfsFetcherTest extends TestCase {
                                                                               CheckSumType.CRC32))));
         FileUtils.writeStringToFile(metadataFile, metadata.toJsonString());
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "8");
+                                    testDestinationDirectory.getAbsolutePath() + "8",
+                                    null);
         assertNotNull(fetchedFile);
         assertEquals(fetchedFile.getAbsolutePath(), testDestinationDirectory.getAbsolutePath()
                                                     + "8");
@@ -148,14 +159,16 @@ public class HdfsFetcherTest extends TestCase {
         // Required for backward compatibility with existing hadoop stores
         HdfsFetcher fetcher = new HdfsFetcher();
         File fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                         testDestinationDirectory.getAbsolutePath() + "1");
+                                         testDestinationDirectory.getAbsolutePath() + "1",
+                                         null);
         assertNotNull(fetchedFile);
 
         // Test 2: Add checksum file with incorrect fileName, should not fail
         File checkSumFile = new File(testSourceDirectory, "blahcheckSum.txt");
         checkSumFile.createNewFile();
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "2");
+                                    testDestinationDirectory.getAbsolutePath() + "2",
+                                    null);
         assertNotNull(fetchedFile);
         checkSumFile.delete();
 
@@ -163,9 +176,40 @@ public class HdfsFetcherTest extends TestCase {
         checkSumFile = new File(testSourceDirectory, "adler32checkSum.txt");
         checkSumFile.createNewFile();
         fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
-                                    testDestinationDirectory.getAbsolutePath() + "3");
+                                    testDestinationDirectory.getAbsolutePath() + "3",
+                                    null);
         assertNotNull(fetchedFile);
         checkSumFile.delete();
 
+    }
+
+    public void testQuota() throws Exception {
+        File testSourceDirectory = TestUtils.createTempDir();
+        File testDestinationDirectory = TestUtils.createTempDir();
+
+        File testFile = File.createTempFile("test", ".dat", testSourceDirectory);
+        testFile.createNewFile();
+
+        FileWriter fileWriter = new FileWriter(testFile);
+        BufferedWriter writer = new BufferedWriter(fileWriter);
+        try {
+            for(int i = 0; i < 40960; i++) {
+                writer.append('a');
+            }
+            writer.flush();
+        } finally {
+            try {
+                writer.close();
+            } finally {
+                fileWriter.close();
+            }
+        }
+
+        HdfsFetcher fetcher = new HdfsFetcher();
+        File fetchedFile = fetcher.fetch(testSourceDirectory.getAbsolutePath(),
+                                         testDestinationDirectory.getAbsolutePath() + "1",
+                                         new Quota(1000, 10000));
+
+        assertNull("should not fetch when hard limit is exceeded", fetchedFile);
     }
 }

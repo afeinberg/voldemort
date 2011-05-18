@@ -40,6 +40,7 @@ import org.apache.log4j.Logger;
 import voldemort.VoldemortException;
 import voldemort.annotations.jmx.JmxGetter;
 import voldemort.server.protocol.admin.AsyncOperationStatus;
+import voldemort.store.quota.Quota;
 import voldemort.store.readonly.FileFetcher;
 import voldemort.store.readonly.ReadOnlyStorageMetadata;
 import voldemort.store.readonly.checksum.CheckSum;
@@ -92,7 +93,7 @@ public class HdfsFetcher implements FileFetcher {
         this.status = null;
     }
 
-    public File fetch(String sourceFileUrl, String destinationFile) throws IOException {
+    public File fetch(String sourceFileUrl, String destinationFile, Quota quota) throws IOException {
         Path path = new Path(sourceFileUrl);
         Configuration config = new Configuration();
         config.setInt("io.socket.receive.buffer", bufferSize);
@@ -111,7 +112,7 @@ public class HdfsFetcher implements FileFetcher {
                                              + " already exists");
             }
 
-            boolean result = fetch(fs, path, destination, stats);
+            boolean result = fetch(fs, path, destination, stats, quota);
 
             if(result) {
                 return destination;
@@ -123,12 +124,30 @@ public class HdfsFetcher implements FileFetcher {
         }
     }
 
-    private boolean fetch(FileSystem fs, Path source, File dest, CopyStats stats)
+    private boolean fetch(FileSystem fs, Path source, File dest, CopyStats stats, Quota quota)
             throws IOException {
         if(!fs.isFile(source)) {
             Utils.mkdirs(dest);
             FileStatus[] statuses = fs.listStatus(source);
             if(statuses != null) {
+                if(quota != null) {
+                    long bytesTotal = 0;
+                    for(FileStatus status: statuses)
+                        bytesTotal += status.getLen();
+                    if(bytesTotal > quota.getHardLimit()) {
+                        logger.error("Hard limit exceeded! Quota is "
+                                     + quota.getHardLimit()
+                                     + " size in HDFS is "
+                                     + bytesTotal);
+                        return false;
+                    } else if(bytesTotal > quota.getSoftLimit()) {
+                        logger.error("Soft limit exceeded! Quota is "
+                                     + quota.getSoftLimit()
+                                     + " size in HDFS is "
+                                     + bytesTotal);
+                    }
+                }
+
                 // sort the files so that index files come last. Maybe
                 // this will help keep them cached until the swap
                 Arrays.sort(statuses, new IndexFileLastComparator());
@@ -407,8 +426,10 @@ public class HdfsFetcher implements FileFetcher {
                                               REPORTING_INTERVAL_BYTES,
                                               DEFAULT_BUFFER_SIZE);
         long start = System.currentTimeMillis();
-        File location = fetcher.fetch(url, System.getProperty("java.io.tmpdir") + File.separator
-                                           + start);
+        File location = fetcher.fetch(url,
+                                      System.getProperty("java.io.tmpdir") + File.separator
+                                      + start,
+                                      null);
         double rate = size * Time.MS_PER_SECOND / (double) (System.currentTimeMillis() - start);
         NumberFormat nf = NumberFormat.getInstance();
         nf.setMaximumFractionDigits(2);

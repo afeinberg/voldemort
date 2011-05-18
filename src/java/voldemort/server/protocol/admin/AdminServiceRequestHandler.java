@@ -667,10 +667,13 @@ public class AdminServiceRequestHandler implements RequestHandler {
                         logger.info("Executing fetch of " + fetchUrl);
                         updateStatus("0 MB copied at 0 MB/sec - 0 % complete");
                         try {
+                            StoreDefinition storeDef = metadataStore.getStoreDef(storeName);
                             fileFetcher.setAsyncOperationStatus(status);
-                            fetchDir = fileFetcher.fetch(fetchUrl, store.getStoreDirPath()
-                                                                   + File.separator + "version-"
-                                                                   + Long.toString(pushVersion));
+                            fetchDir = fileFetcher.fetch(fetchUrl,
+                                                         store.getStoreDirPath()
+                                                         + File.separator + "version-"
+                                                         + Long.toString(pushVersion),
+                                                         storeDef.hasDiskQuota() ? storeDef.getDiskQuota() : null);
                             updateStatus("Completed fetch of " + fetchUrl);
 
                             if(fetchDir == null) {

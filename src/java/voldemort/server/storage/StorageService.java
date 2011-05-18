@@ -319,9 +319,11 @@ public class StorageService extends AbstractService {
         try {
             DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> enforcingStore = null;
             if(voldemortConfig.isQuotaEnabled() && storeDef.hasDiskQuota()) {
-                enforcingStore = createDiskQuotaEnforcingStore(engine, storeDef.getDiskQuota());
-                enforcingStore.setEnforceQuota(voldemortConfig.isQuotaEnforced());
-                mutableEngine = enforcingStore;
+                if(!(engine instanceof ReadOnlyStorageEngine)) {
+                    enforcingStore = createDiskQuotaEnforcingStore(engine, storeDef.getDiskQuota());
+                    enforcingStore.setEnforceQuota(voldemortConfig.isQuotaEnforced());
+                    mutableEngine = enforcingStore;
+                }
             }
             registerEngine(mutableEngine);
 
