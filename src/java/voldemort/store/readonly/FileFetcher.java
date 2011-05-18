@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import voldemort.server.protocol.admin.AsyncOperationStatus;
+import voldemort.store.quota.Quota;
 
 /**
  * An interface to fetch data for readonly store. The fetch could be via rsync
@@ -17,7 +18,7 @@ import voldemort.server.protocol.admin.AsyncOperationStatus;
  */
 public interface FileFetcher {
 
-    public File fetch(String source, String dest) throws IOException;
+    public File fetch(String source, String dest, Quota quota) throws IOException;
 
     public void setAsyncOperationStatus(AsyncOperationStatus status);
 }

@@ -270,7 +270,7 @@ public class HadoopStoreBuilderTest {
 
         // Fetch to version directory
         File versionDir = new File(storeDir, "version-0");
-        fetcher.fetch(nodeFile.getAbsolutePath(), versionDir.getAbsolutePath());
+        fetcher.fetch(nodeFile.getAbsolutePath(), versionDir.getAbsolutePath(), null);
         Assert.assertTrue(versionDir.exists());
 
         // open store
