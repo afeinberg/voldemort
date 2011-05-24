@@ -22,19 +22,19 @@ public class DiskQuotaEnforcingStoreTest {
     private volatile boolean hardLimitExceeded = false;
 
     private QuotaAction quotaAction = new QuotaAction() {
-        public void onSoftLimitExceeded() {
+        public void softLimitExceeded() {
             softLimitExceeded = true;
         }
 
-        public void onHardLimitExceeded() {
+        public void hardLimitExceeded() {
             hardLimitExceeded = true;
         }
 
-        public void onSoftLimitCleared() {
+        public void softLimitCleared() {
             softLimitExceeded = false;
         }
 
-        public void onHardLimitCleared() {
+        public void hardLimitCleared() {
             hardLimitExceeded = false;
         }
     };
