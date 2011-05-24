@@ -5,20 +5,20 @@ public interface QuotaAction {
     /**
      * Invoked each time a soft limit is exceeded
      */
-    public void onSoftLimitExceeded();
+    public void softLimitExceeded();
 
     /**
      * Invoked each time a hard limit is exceeded
      */
-    public void onHardLimitExceeded();
+    public void hardLimitExceeded();
 
     /**
      * Invoked when a soft limit was exceeded before, but no longer is
      */
-    public void onSoftLimitCleared();
+    public void softLimitCleared();
 
     /**
-     * Invoked whena hard limit was exceeded before, but no longer is
+     * Invoked when a hard limit was exceeded before, but no longer is
      */
-    public void onHardLimitCleared();
+    public void hardLimitCleared();
 }

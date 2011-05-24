@@ -76,18 +76,18 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
 
             if(isHardLimitExceeded()) {
                 wasHardLimitExceeded = true;
-                action.onHardLimitExceeded();
+                action.hardLimitExceeded();
             } else if(wasHardLimitExceeded) {
                 wasHardLimitExceeded = false;
-                action.onHardLimitCleared();
+                action.hardLimitCleared();
             }
 
             if(isSoftLimitExceeded()) {
                 wasSoftLimitExceeded = true;
-                action.onSoftLimitExceeded();
+                action.softLimitExceeded();
             } else if(wasSoftLimitExceeded) {
                 wasSoftLimitExceeded = false;
-                action.onSoftLimitCleared();
+                action.softLimitCleared();
             }
         }
     }

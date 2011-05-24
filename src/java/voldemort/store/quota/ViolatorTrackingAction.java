@@ -11,19 +11,19 @@ public class ViolatorTrackingAction implements QuotaAction {
         this.storeName = storeName;
     }
 
-    public void onSoftLimitExceeded() {
+    public void softLimitExceeded() {
         quotaStatusJmx.addSoftLimitViolator(storeName);
     }
 
-    public void onHardLimitExceeded() {
+    public void hardLimitExceeded() {
         quotaStatusJmx.addHardLimitViolator(storeName);
     }
 
-    public void onSoftLimitCleared() {
+    public void softLimitCleared() {
         quotaStatusJmx.removeSoftLimitViolator(storeName);
     }
 
-    public void onHardLimitCleared() {
+    public void hardLimitCleared() {
         quotaStatusJmx.removeHardLimitViolator(storeName);
     }
 }
