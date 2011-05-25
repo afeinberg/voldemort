@@ -1,6 +1,7 @@
 package voldemort.store.quota;
 
 import voldemort.VoldemortException;
+import voldemort.annotations.jmx.JmxGetter;
 import voldemort.store.DelegatingStore;
 import voldemort.store.Store;
 import voldemort.store.stats.RequestCounter;
@@ -29,6 +30,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     public List<Versioned<V>> get(K key, T transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
+            // TODO: verify quota
             return getInnerStore().get(key, transforms);
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
@@ -38,6 +40,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     public Map<K, List<Versioned<V>>> getAll(Iterable<K> keys, Map<K, T> transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
+            // TODO: verify quota
             return getInnerStore().getAll(keys, transforms);
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
@@ -47,6 +50,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     public void put(K key, Versioned<V> value, T transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
+            // TODO: verify quota
             getInnerStore().put(key, value, transforms);
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
@@ -56,12 +60,14 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     public boolean delete(K key, Version version) throws VoldemortException {
         long start = System.nanoTime();
         try {
+            // TODO: verify quota
             return getInnerStore().delete(key, version);
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
         }
     }
 
+    @JmxGetter(name = "Throughput", description = "Throughput for all operations")
     public float getThroughput() {
         return requestCounter.getThroughput();
     }
