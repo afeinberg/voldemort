@@ -25,6 +25,12 @@ public class RateLimitingStoreTest {
     @Mock
     private QuotaAction action;
 
+    private <K, V, T> RateLimitingStore<K, V, T> getLimitingStore(Store<K, V, T> store,
+                                                                  Quota quota,
+                                                                  QuotaAction action) {
+        return new RateLimitingStore<K, V, T>(store, quota, action, 1000);
+    }
+
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
@@ -41,11 +47,23 @@ public class RateLimitingStoreTest {
         assertTrue(rlStore.getThroughput() >= 1000);
     }
 
-    private <K, V, T> RateLimitingStore<K, V, T> getLimitingStore(Store<K, V, T> store,
-                                                                  Quota quota,
-                                                                  QuotaAction action) {
-        return new RateLimitingStore<K, V, T>(store, quota, action, 1000);
+    @Test
+    public void testSoftLimitViolation() {
+        // TODO
     }
 
+    @Test
+    public void testHardLimitViolation() {
+        // TODO
+    }
 
+    @Test
+    public void testSoftLimitRecovery() {
+        // TODO
+    }
+
+    @Test
+    public void testHardLimitRecovery() {
+        // TODO
+    }
 }
