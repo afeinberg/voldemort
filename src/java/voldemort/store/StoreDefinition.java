@@ -62,6 +62,7 @@ public class StoreDefinition implements Serializable {
     private final Integer hintPrefListSize;
     private final List<String> owners;
     private final Quota diskQuota;
+    private final Quota rateLimit;
 
     public StoreDefinition(String name,
                            String type,
@@ -87,7 +88,8 @@ public class StoreDefinition implements Serializable {
                            HintedHandoffStrategyType hintedHandoffStrategyType,
                            Integer hintPrefListSize,
                            List<String> owners,
-                           Quota diskQuota) {
+                           Quota diskQuota,
+                           Quota rateLimit) {
         this.name = Utils.notNull(name);
         this.type = Utils.notNull(type);
         this.description = description;
@@ -113,6 +115,7 @@ public class StoreDefinition implements Serializable {
         this.hintPrefListSize = hintPrefListSize;
         this.owners = owners;
         this.diskQuota = diskQuota;
+        this.rateLimit = rateLimit;
         checkParameterLegality();
     }
 
@@ -341,6 +344,14 @@ public class StoreDefinition implements Serializable {
         return diskQuota != null;
     }
 
+    public Quota getRateLimit() {
+        return this.rateLimit;
+    }
+
+    public boolean hasRateLimit() {
+        return rateLimit != null;
+    }
+
     @Override
     public boolean equals(Object o) {
         if(this == o)
@@ -384,7 +395,8 @@ public class StoreDefinition implements Serializable {
                                                                   : null)
                && Objects.equal(getHintedHandoffStrategyType(), def.getHintedHandoffStrategyType())
                && Objects.equal(getHintPrefListSize(), def.getHintPrefListSize())
-               && Objects.equal(getDiskQuota(), def.getDiskQuota());
+               && Objects.equal(getDiskQuota(), def.getDiskQuota())
+               && Objects.equal(getRateLimit(), def.getRateLimit());
     }
 
     @Override
@@ -416,7 +428,8 @@ public class StoreDefinition implements Serializable {
                                                               : null,
                                 hasHintPreflistSize() ? getHintPrefListSize() : null,
                                 getOwners(),
-                                getDiskQuota());
+                                getDiskQuota(),
+                                getRateLimit());
     }
 
     @Override
@@ -436,6 +449,7 @@ public class StoreDefinition implements Serializable {
                + ", hinted-handoff-strategy = " + getHintedHandoffStrategyType()
                + ", hint-preflist-size = " + getHintPrefListSize() + ", owners = " + getOwners()
                + ", disk-quota = " + getDiskQuota()
+               + ", rate-limit = " + getRateLimit()
                + ")";
     }
 }
