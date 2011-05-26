@@ -44,7 +44,8 @@
 				minOccurs="0" maxOccurs="1" />
 			<xs:element name="retention-scan-throttle-rate" type="xs:nonNegativeInteger"
 				minOccurs="0" maxOccurs="1" />
-            <xs:element name="disk-quota" minOccurs="0" maxOccurs="1" type="quota" />
+      <xs:element name="disk-quota" minOccurs="0" maxOccurs="1" type="quota" />
+      <xs:element name="rate-limit" minOccurs="0" maxOccurs="1" type="quota" />
 		</xs:all>
 	</xs:complexType>
 
