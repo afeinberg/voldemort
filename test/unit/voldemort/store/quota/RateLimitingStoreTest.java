@@ -16,8 +16,6 @@ import static org.mockito.Mockito.*;
 
 public class RateLimitingStoreTest {
 
-    private static final Logger logger = Logger.getLogger(RateLimitingStoreTest.class);
-
     private final Quota quota = new Quota(100, 1000);
 
     @Mock
@@ -29,7 +27,7 @@ public class RateLimitingStoreTest {
     private <K, V, T> RateLimitingStore<K, V, T> getLimitingStore(Store<K, V, T> store,
                                                                   Quota quota,
                                                                   QuotaAction action) {
-        return new RateLimitingStore<K, V, T>(store, quota, action, 1000);
+        return new RateLimitingStore<K, V, T>(store, quota, action, 1000, 1000);
     }
 
     @Before
@@ -71,6 +69,11 @@ public class RateLimitingStoreTest {
 
         assertTrue(exceptionCaught);
         verify(action).hardLimitExceeded();
+    }
+
+    @Test
+    public void testHardLimitBanAfterViolation() {
+        // TODO: implement
     }
 
     @Test
