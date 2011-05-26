@@ -23,17 +23,20 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     private final QuotaAction action;
     private final RequestCounter requestCounter;
     private final int durationMS;
+    private final long bannageIntervalMS;
 
     private volatile RateLimitVerificationJob verificationJob;
 
     private volatile boolean enforceLimit;
     private volatile boolean softLimitExceeded;
     private volatile boolean hardLimitExceeded;
+    private volatile long bannageStartedMS;
 
     public RateLimitingStore(Store<K, V, T> innerStore,
                              Quota quota,
                              QuotaAction action,
-                             int durationMS) {
+                             int durationMS,
+                             int bannageIntervalMS) {
         super(innerStore);
         this.quota = quota;
         this.action = action;
@@ -43,6 +46,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         this.softLimitExceeded = false;
         this.hardLimitExceeded = false;
         this.enforceLimit = true;
+        this.bannageIntervalMS = bannageIntervalMS;
         init();
     }
 
@@ -149,11 +153,14 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
             if(!hardLimitExceeded) {
                 action.hardLimitExceeded();
                 hardLimitExceeded = true;
+                bannageStartedMS = System.currentTimeMillis();
             }
         } else {
             if(hardLimitExceeded) {
-                action.hardLimitCleared();
-                hardLimitExceeded = false;
+                if(System.currentTimeMillis() - bannageStartedMS > bannageIntervalMS) {
+                    action.hardLimitCleared();
+                    hardLimitExceeded = false;
+                }
             }
         }
     }
