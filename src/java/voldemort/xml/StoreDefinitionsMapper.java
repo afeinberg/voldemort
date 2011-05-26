@@ -78,6 +78,7 @@ public class StoreDefinitionsMapper {
     public final static String STORE_COMPRESSION_TYPE_ELMT = "type";
     public final static String STORE_COMPRESSION_OPTIONS_ELMT = "options";
     public final static String STORE_DISK_QUOTA_ELMT = "disk-quota";
+    public final static String STORE_RATE_LIMIT_ELMT = "rate-limit";
     public final static String STORE_ROUTING_TIER_ELMT = "routing";
     public final static String STORE_REPLICATION_FACTOR_ELMT = "replication-factor";
     public final static String STORE_REQUIRED_WRITES_ELMT = "required-writes";
@@ -261,6 +262,15 @@ public class StoreDefinitionsMapper {
                                   Utils.parseBytes(hardLimitStr));
         }
 
+        Quota rateLimit = null;
+        Element rateLimitElement = store.getChild(STORE_RATE_LIMIT_ELMT);
+        if(rateLimitElement != null) {
+            String hardLimitStr = rateLimitElement.getChildText(STORE_QUOTA_HARD_LIMIT_ELMT);
+            String softLimitStr = rateLimitElement.getChildText(STORE_QUOTA_SOFT_LIMIT_ELMT);
+            rateLimit = new Quota(Long.parseLong(softLimitStr),
+                                  Long.parseLong(hardLimitStr));
+        }
+
         return new StoreDefinitionBuilder().setName(name)
                                            .setType(storeType)
                                            .setDescription(description)
@@ -282,6 +292,7 @@ public class StoreDefinitionsMapper {
                                            .setHintedHandoffStrategy(hintedHandoffStrategy)
                                            .setHintPrefListSize(hintPrefListSize)
                                            .setDiskQuota(diskQuota)
+                                           .setRateLimit(rateLimit)
                                            .build();
     }
 
