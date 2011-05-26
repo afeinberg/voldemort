@@ -1,5 +1,9 @@
 package voldemort.store.quota;
 
+import java.lang.Thread.UncaughtExceptionHandler;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import voldemort.VoldemortException;
 import voldemort.annotations.jmx.JmxGetter;
 import voldemort.store.DelegatingStore;
@@ -13,9 +17,14 @@ import java.util.Map;
 
 public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
 
+    private static final Logger logger = Logger.getLogger(RateLimitingStore.class);
+
     private final Quota quota;
     private final QuotaAction action;
     private final RequestCounter requestCounter;
+    private final int durationMS;
+
+    private volatile RateLimitVerificationJob verificationJob;
 
     private volatile boolean enforceLimit;
     private volatile boolean softLimitExceeded;
@@ -29,7 +38,29 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         this.quota = quota;
         this.action = action;
         this.requestCounter = new RequestCounter(durationMS);
+        this.durationMS = durationMS;
+        this.verificationJob = null;
+        this.softLimitExceeded = false;
+        this.hardLimitExceeded = false;
         this.enforceLimit = true;
+        init();
+    }
+
+    public final void init()  {
+        verificationJob = new RateLimitVerificationJob(this, durationMS);
+
+        Thread verificationThread = new Thread(verificationJob,
+                                               "RateLimitVerification");
+        verificationThread.setDaemon(true);
+        verificationThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+
+            public void uncaughtException(Thread t, Throwable e) {
+                if(logger.isEnabledFor(Level.ERROR))
+                    logger.error("Uncaught exception in rate limit verification thread:", e);
+            }
+        });
+
+        verificationThread.start();
     }
 
     public List<Versioned<V>> get(K key, T transforms) throws VoldemortException {
@@ -75,6 +106,20 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
         }
+    }
+
+    @Override
+    public synchronized void close() throws VoldemortException {
+        if(verificationJob != null)
+            verificationJob.close();
+        else {
+            if(logger.isEnabledFor(Level.ERROR))
+                logger.warn("Warning closing RateLimitingStore "
+                            + getName()
+                            + ": verification job is not initialized!");
+        }
+
+        getInnerStore().close();
     }
 
     public void setEnforceLimit(boolean enforceLimit) {
