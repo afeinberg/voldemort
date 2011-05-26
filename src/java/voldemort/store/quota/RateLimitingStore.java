@@ -67,6 +67,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         verificationThread.start();
     }
 
+    @Override
     public List<Versioned<V>> get(K key, T transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
@@ -82,6 +83,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
             throw new RateLimitExceededException("Rate limit exceeded");
     }
 
+    @Override
     public Map<K, List<Versioned<V>>> getAll(Iterable<K> keys, Map<K, T> transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
@@ -92,6 +94,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         }
     }
 
+    @Override
     public void put(K key, Versioned<V> value, T transforms) throws VoldemortException {
         long start = System.nanoTime();
         try {
@@ -102,6 +105,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         }
     }
 
+    @Override
     public boolean delete(K key, Version version) throws VoldemortException {
         long start = System.nanoTime();
         try {
