@@ -107,7 +107,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
             }
         } else {
             if(hardLimitExceeded) {
-                action.softLimitCleared();
+                action.hardLimitCleared();
                 hardLimitExceeded = false;
             }
         }
