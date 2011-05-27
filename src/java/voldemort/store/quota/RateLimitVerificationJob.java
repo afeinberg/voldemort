@@ -7,11 +7,11 @@ public class RateLimitVerificationJob implements Runnable {
     private static final Logger logger = Logger.getLogger(RateLimitVerificationJob.class);
 
     private final RateLimitingStore rateLimitingStore;
-    private final int intervalMS;
+    private final long intervalMS;
     private volatile boolean isRunning;
 
     public RateLimitVerificationJob(RateLimitingStore rateLimitingStore,
-                                    int intervalMS) {
+                                    long intervalMS) {
         this.rateLimitingStore = rateLimitingStore;
         this.intervalMS = intervalMS;
         this.isRunning = true;
