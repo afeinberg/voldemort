@@ -137,6 +137,9 @@ public class VoldemortConfig implements Serializable {
     private boolean enableQuota;
     private boolean enforceQuota;
     private long diskQuotaVerificationFrequencyMs;
+    private long rateLimitVerificationFrequencyMs;
+    private int rateLimitBannageIntervalMs;
+    private int rateLimitDurationMs;
 
     private List<String> storageConfigurations;
 
@@ -289,6 +292,9 @@ public class VoldemortConfig implements Serializable {
         this.enableQuota = props.getBoolean("quota.enable", false);
         this.enforceQuota = props.getBoolean("quota.enforce", false);
         this.diskQuotaVerificationFrequencyMs = props.getLong("quota.disk.frequency.ms", 60 * 1000);
+        this.rateLimitVerificationFrequencyMs = props.getLong("quota.rate-limit.frequency.ms", 1000);
+        this.rateLimitBannageIntervalMs = props.getInt("quota.rate-limit.bannage.ms", 5 * 60 * 1000);
+        this.rateLimitDurationMs = props.getInt("quota.rate-limit.interval.ms", 1000);
 
         this.gossipInterval = props.getInt("gossip.interval.ms", 30 * 1000);
 
@@ -1437,4 +1443,27 @@ public class VoldemortConfig implements Serializable {
         this.diskQuotaVerificationFrequencyMs = diskQuotaVerificationFrequencyMs;
     }
 
+    public long getRateLimitVerificationFrequencyMs() {
+          return rateLimitVerificationFrequencyMs;
+      }
+
+    public void setRateLimitVerificationFrequencyMs(long rateLimitVerificationFrequencyMs) {
+        this.rateLimitVerificationFrequencyMs = rateLimitVerificationFrequencyMs;
+    }
+
+    public int getRateLimitBannageIntervalMs() {
+        return rateLimitBannageIntervalMs;
+    }
+
+    public void setRateLimitBannageIntervalMs(int rateLimitBannageIntervalMs) {
+        this.rateLimitBannageIntervalMs = rateLimitBannageIntervalMs;
+    }
+
+    public int getRateLimitDurationMs() {
+        return rateLimitDurationMs;
+    }
+
+    public void setRateLimitDurationMs(int rateLimitDurationMs) {
+        this.rateLimitDurationMs = rateLimitDurationMs;
+    }
 }

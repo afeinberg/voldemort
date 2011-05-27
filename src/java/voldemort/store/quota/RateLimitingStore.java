@@ -23,6 +23,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
     private final QuotaAction action;
     private final RequestCounter requestCounter;
     private final int durationMS;
+    private final long verificationFrequencyMS;
     private final long bannageIntervalMS;
 
     private volatile RateLimitVerificationJob verificationJob;
@@ -36,6 +37,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
                              Quota quota,
                              QuotaAction action,
                              int durationMS,
+                             long verificationFrequencyMS,
                              int bannageIntervalMS) {
         super(innerStore);
         this.quota = quota;
@@ -47,11 +49,12 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         this.hardLimitExceeded = false;
         this.enforceLimit = true;
         this.bannageIntervalMS = bannageIntervalMS;
+        this.verificationFrequencyMS = verificationFrequencyMS;
         init();
     }
 
     public final void init()  {
-        verificationJob = new RateLimitVerificationJob(this, durationMS);
+        verificationJob = new RateLimitVerificationJob(this, verificationFrequencyMS);
 
         Thread verificationThread = new Thread(verificationJob,
                                                "RateLimitVerification");
