@@ -281,10 +281,14 @@ public class StorageService extends AbstractService {
                                                              "aggregate-perf"));
 
         // enable quota status jmx
-        if(voldemortConfig.isQuotaEnabled())
+        if(voldemortConfig.isQuotaEnabled()) {
             JmxUtils.registerMbean(diskQuotaStatusJmx,
                                    JmxUtils.createObjectName("voldemort.store.quota",
                                                              "disk-quota"));
+            JmxUtils.registerMbean(rateLimitStatusJmx,
+                                   JmxUtils.createObjectName("voldemort.store.quota",
+                                                             "rate-limit"));
+        }
 
         logger.info("All stores initialized.");
     }
@@ -321,14 +325,15 @@ public class StorageService extends AbstractService {
         StorageEngine<ByteArray, byte[], byte[]> mutableEngine = engine;
         try {
             DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> enforcingStore = null;
-            if(voldemortConfig.isQuotaEnabled() && storeDef.hasDiskQuota()) {
+            if(voldemortConfig.isQuotaEnabled() && storeDef.hasDiskQuota() ) {
                 if(!(engine instanceof ReadOnlyStorageEngine)) {
                     enforcingStore = createDiskQuotaEnforcingStore(engine, storeDef.getDiskQuota());
                     enforcingStore.setEnforceQuota(voldemortConfig.isQuotaEnforced());
                     mutableEngine = enforcingStore;
                 }
             }
-            registerEngine(mutableEngine);
+            registerEngine(mutableEngine,
+                           voldemortConfig.isQuotaEnabled() ? storeDef.getRateLimit() : null);
 
             if(voldemortConfig.isServerRoutingEnabled())
                 registerNodeStores(storeDef, metadata.getCluster(), voldemortConfig.getNodeId());
@@ -355,11 +360,11 @@ public class StorageService extends AbstractService {
                                                                                .getNumberOfNodes()));
     }
 
-    public <K, V, T> RateLimitingStore<K, V, T> createRateLimitingStore(StorageEngine<K, V, T> storageEngine,
+    public <K, V, T> RateLimitingStore<K, V, T> createRateLimitingStore(Store<K, V, T> store,
                                                                         Quota quota) {
         QuotaAction quotaAction = new ViolatorTrackingAction(rateLimitStatusJmx,
-                                                             storageEngine.getName());
-        return new RateLimitingStore<K, V, T>(storageEngine,
+                                                             store.getName());
+        return new RateLimitingStore<K, V, T>(store,
                                               quota,
                                               quotaAction,
                                               voldemortConfig.getRateLimitDurationMs(),
@@ -415,6 +420,11 @@ public class StorageService extends AbstractService {
      * @param engine Register the storage engine
      */
     public void registerEngine(StorageEngine<ByteArray, byte[], byte[]> engine) {
+        registerEngine(engine, null);
+    }
+
+    public void registerEngine(StorageEngine<ByteArray, byte[], byte[]> engine,
+                               Quota quota) {
         Cluster cluster = this.metadata.getCluster();
         storeRepository.addStorageEngine(engine);
 
@@ -427,6 +437,10 @@ public class StorageService extends AbstractService {
             store = new LoggingStore<ByteArray, byte[], byte[]>(store,
                                                                 cluster.getName(),
                                                                 SystemTime.INSTANCE);
+        if(quota != null && voldemortConfig.isQuotaEnabled())
+            store = createRateLimitingStore(store,
+                                            quota);
+
         if(!isSlop) {
             if(!isMetadata)
                 if(voldemortConfig.isGrandfatherEnabled())
