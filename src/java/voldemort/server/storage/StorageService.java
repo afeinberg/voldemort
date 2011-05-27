@@ -74,6 +74,7 @@ import voldemort.store.quota.DiskQuotaEnforcingStore;
 import voldemort.store.quota.Quota;
 import voldemort.store.quota.QuotaAction;
 import voldemort.store.quota.QuotaStatusJmx;
+import voldemort.store.quota.RateLimitingStore;
 import voldemort.store.quota.ViolatorTrackingAction;
 import voldemort.store.readonly.ReadOnlyStorageConfiguration;
 import voldemort.store.readonly.ReadOnlyStorageEngine;
@@ -128,6 +129,7 @@ public class StorageService extends AbstractService {
     private final StoreStats storeStats;
     private final RoutedStoreFactory routedStoreFactory;
     private final QuotaStatusJmx diskQuotaStatusJmx;
+    private final QuotaStatusJmx rateLimitStatusJmx;
 
     public StorageService(StoreRepository storeRepository,
                           MetadataStore metadata,
@@ -161,6 +163,7 @@ public class StorageService extends AbstractService {
                                                          this.clientThreadPool,
                                                          voldemortConfig.getClientRoutingTimeoutMs());
         this.diskQuotaStatusJmx = new QuotaStatusJmx("Disk quota");
+        this.rateLimitStatusJmx = new QuotaStatusJmx("Rate limit");
     }
 
     private void initStorageConfig(String configClassName) {
@@ -346,6 +349,18 @@ public class StorageService extends AbstractService {
                                                     quotaAction,
                                                     quota.perNodeQuota(metadata.getCluster()
                                                                                .getNumberOfNodes()));
+    }
+
+    public <K, V, T> RateLimitingStore<K, V, T> createRateLimitingStore(StorageEngine<K, V, T> storageEngine,
+                                                                        Quota quota) {
+        QuotaAction quotaAction = new ViolatorTrackingAction(rateLimitStatusJmx,
+                                                             storageEngine.getName());
+        return new RateLimitingStore<K, V, T>(storageEngine,
+                                              quota,
+                                              quotaAction,
+                                              voldemortConfig.getRateLimitDurationMs(),
+                                              voldemortConfig.getRateLimitVerificationFrequencyMs(),
+                                              voldemortConfig.getRateLimitBannageIntervalMs());
     }
 
     /**

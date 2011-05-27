@@ -27,7 +27,7 @@ public class RateLimitingStoreTest {
     private <K, V, T> RateLimitingStore<K, V, T> getLimitingStore(Store<K, V, T> store,
                                                                   Quota quota,
                                                                   QuotaAction action) {
-        return new RateLimitingStore<K, V, T>(store, quota, action, 1000, 1000);
+        return new RateLimitingStore<K, V, T>(store, quota, action, 1000, 1000, 1000);
     }
 
     @Before
