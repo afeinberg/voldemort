@@ -134,7 +134,7 @@ public class VoldemortConfig implements Serializable {
 
     private boolean enableQuota;
     private boolean enforceQuota;
-    private long quotaVerificationFrequencyMs;
+    private long diskQuotaVerificationFrequencyMs;
 
     private List<String> storageConfigurations;
 
@@ -284,7 +284,7 @@ public class VoldemortConfig implements Serializable {
 
         this.enableQuota = props.getBoolean("quota.enable", false);
         this.enforceQuota = props.getBoolean("quota.enforce", false);
-        this.quotaVerificationFrequencyMs = props.getLong("quota.frequency.ms", 60 * 1000);
+        this.diskQuotaVerificationFrequencyMs = props.getLong("quota.disk.frequency.ms", 60 * 1000);
 
         this.gossipInterval = props.getInt("gossip.interval.ms", 30 * 1000);
 
@@ -1417,12 +1417,12 @@ public class VoldemortConfig implements Serializable {
         this.enforceQuota = enforceQuota;
     }
 
-    public long getQuotaVerificationFrequencyMs() {
-        return quotaVerificationFrequencyMs;
+    public long getDiskQuotaVerificationFrequencyMs() {
+        return diskQuotaVerificationFrequencyMs;
     }
 
-    public void setQuotaVerificationFrequencyMs(long quotaVerificationFrequencyMs) {
-        this.quotaVerificationFrequencyMs = quotaVerificationFrequencyMs;
+    public void setDiskQuotaVerificationFrequencyMs(long diskQuotaVerificationFrequencyMs) {
+        this.diskQuotaVerificationFrequencyMs = diskQuotaVerificationFrequencyMs;
     }
 
 }

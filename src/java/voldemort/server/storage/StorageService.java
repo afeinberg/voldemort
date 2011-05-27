@@ -557,7 +557,7 @@ public class StorageService extends AbstractService {
                                               DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> store) {
         GregorianCalendar cal = new GregorianCalendar();
         cal.add(Calendar.SECOND,
-                (int) (voldemortConfig.getQuotaVerificationFrequencyMs() / Time.MS_PER_SECOND));
+                (int) (voldemortConfig.getDiskQuotaVerificationFrequencyMs() / Time.MS_PER_SECOND));
         Date nextRun = cal.getTime();
         logger.info("Initializing quota verification job for " + store.getName()
                     + " at " + nextRun);
@@ -565,7 +565,7 @@ public class StorageService extends AbstractService {
                            new QuotaVerificationJob<ByteArray, byte[], byte[]>(store,
                                                                                description),
                            nextRun,
-                           voldemortConfig.getQuotaVerificationFrequencyMs());
+                           voldemortConfig.getDiskQuotaVerificationFrequencyMs());
     }
 
     /**

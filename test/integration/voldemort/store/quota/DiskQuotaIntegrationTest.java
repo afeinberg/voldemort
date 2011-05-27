@@ -54,7 +54,7 @@ public class DiskQuotaIntegrationTest {
         for(VoldemortConfig config: configs) {
             config.setEnableQuota(true);
             config.setEnforceQuota(true);
-            config.setQuotaVerificationFrequencyMs(10000);
+            config.setDiskQuotaVerificationFrequencyMs(10000);
             config.setBdbMaxLogFileSize(1000000);
             config.setBdbCleanerThreads(3);
             config.setBdbCleanerMinUtilization(90);
