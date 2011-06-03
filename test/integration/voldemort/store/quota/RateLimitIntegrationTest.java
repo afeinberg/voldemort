@@ -66,7 +66,14 @@ public class RateLimitIntegrationTest {
 
     @After
     public void shutDown() throws IOException {
-        // TODO: Shutdown the cluster
+        for(VoldemortServer server: servers) {
+            try {
+                ServerTestUtils.stopVoldemortServer(server);
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+        socketStoreFactory.close();
     }
 
     @Test
