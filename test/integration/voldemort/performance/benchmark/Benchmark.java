@@ -22,6 +22,7 @@ import java.io.StringReader;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -110,6 +111,13 @@ public class Benchmark {
     public static final String STORE_TYPE = "view";
     public static final String VIEW_CLASS = "voldemort.store.views.UpperCaseView";
     public static final String HAS_TRANSFORMS = "true";
+
+    public static final String FAILURE_DETECTOR_INTERVAL = "failure-detector-interval";
+    public static final String FAILURE_DETECTOR_THRESHOLD = "failure-detector-threshold";
+    public static final String FAILURE_DETECTOR_IMPL = "failure-detector-impl";
+    public static final String FAILURE_DETECTOR_COUNT_MIN = "failure-detector-count-min";
+    public static final String FAILURE_DETECTOR_LENGTH_THRESHOLD = "failure-detector-length-threshold";
+    public static final String ROUTING_TIMEOUT = "routing-timeout";
 
     private StoreClient<Object, Object> storeClient;
     private StoreClientFactory factory;
@@ -337,6 +345,24 @@ public class Benchmark {
             if(clientZoneId >= 0) {
                 clientConfig.setClientZoneId(clientZoneId);
             }
+            if(benchmarkProps.containsKey(ROUTING_TIMEOUT)) {
+                clientConfig.setRoutingTimeout(benchmarkProps.getInt(ROUTING_TIMEOUT), TimeUnit.MILLISECONDS);
+            }
+            if(benchmarkProps.containsKey(FAILURE_DETECTOR_IMPL)) {
+                clientConfig.setFailureDetectorImplementation(benchmarkProps.getString(FAILURE_DETECTOR_IMPL));
+            }
+            if(benchmarkProps.containsKey(FAILURE_DETECTOR_INTERVAL)) {
+                clientConfig.setFailureDetectorThresholdInterval(benchmarkProps.getInt(FAILURE_DETECTOR_INTERVAL));
+            }
+            if(benchmarkProps.containsKey(FAILURE_DETECTOR_THRESHOLD)) {
+                clientConfig.setFailureDetectorThreshold(benchmarkProps.getInt(FAILURE_DETECTOR_THRESHOLD));
+            }
+            if(benchmarkProps.containsKey(FAILURE_DETECTOR_COUNT_MIN)) {
+                clientConfig.setFailureDetectorThresholdCountMinimum(benchmarkProps.getInt(FAILURE_DETECTOR_COUNT_MIN));
+            }
+            if(benchmarkProps.containsKey(FAILURE_DETECTOR_LENGTH_THRESHOLD)) {
+                clientConfig.setFailureDetectorRequestLengthThreshold(benchmarkProps.getInt(FAILURE_DETECTOR_LENGTH_THRESHOLD));
+            }
             SocketStoreClientFactory socketFactory = new SocketStoreClientFactory(clientConfig);
             this.storeClient = socketFactory.getStoreClient(storeName);
             StoreDefinition storeDef = getStoreDefinition(socketFactory, storeName);
@@ -546,7 +572,7 @@ public class Benchmark {
               .describedAs("type");
         parser.accepts(REQUEST_FILE,
                        "file with limited list of keys to be used during benchmark phase; Overrides "
-                               + RECORD_SELECTION).withRequiredArg();
+                       + RECORD_SELECTION).withRequiredArg();
         parser.accepts(VALUE_SIZE,
                        "size in bytes for random value; used during warm-up phase and write operation of benchmark phase; Default = 1024")
               .withRequiredArg()
@@ -554,8 +580,8 @@ public class Benchmark {
               .ofType(Integer.class);
         parser.accepts(RECORD_SELECTION,
                        "record selection distribution [ " + ZIPFIAN_RECORD_SELECTION + " | "
-                               + LATEST_RECORD_SELECTION + " | " + UNIFORM_RECORD_SELECTION
-                               + " <default> ]").withRequiredArg();
+                       + LATEST_RECORD_SELECTION + " | " + UNIFORM_RECORD_SELECTION
+                       + " <default> ]").withRequiredArg();
         parser.accepts(TARGET_THROUGHPUT, "fix throughput")
               .withRequiredArg()
               .describedAs("ops/sec")
@@ -574,7 +600,7 @@ public class Benchmark {
               .describedAs("name");
         parser.accepts(METRIC_TYPE,
                        "type of result metric [ " + HISTOGRAM_METRIC_TYPE + " | "
-                               + SUMMARY_METRIC_TYPE + " <default> ]").withRequiredArg();
+                       + SUMMARY_METRIC_TYPE + " <default> ]").withRequiredArg();
         parser.accepts(PLUGIN_CLASS,
                        "classname of implementation of WorkloadPlugin; used to run customized operations ")
               .withRequiredArg()
@@ -582,6 +608,30 @@ public class Benchmark {
         parser.accepts(CLIENT_ZONE_ID, "zone id for client; enables zone routing")
               .withRequiredArg()
               .describedAs("zone-id")
+              .ofType(Integer.class);
+        parser.accepts(ROUTING_TIMEOUT, "routing timeout")
+              .withRequiredArg()
+              .describedAs("routing-timeout")
+              .ofType(Integer.class);
+        parser.accepts(FAILURE_DETECTOR_IMPL, "failure detector implementation")
+              .withRequiredArg()
+              .describedAs("fd-impl")
+              .ofType(String.class);
+        parser.accepts(FAILURE_DETECTOR_INTERVAL, "failure detector threshold interval")
+              .withRequiredArg()
+              .describedAs("fd-interval")
+              .ofType(Integer.class);
+        parser.accepts(FAILURE_DETECTOR_THRESHOLD, "failure detector threshold")
+              .withRequiredArg()
+              .describedAs("fd-threshold")
+              .ofType(Integer.class);
+        parser.accepts(FAILURE_DETECTOR_COUNT_MIN, "failure detector threshold minimum count")
+              .withRequiredArg()
+              .describedAs("min-count")
+              .ofType(Integer.class);
+        parser.accepts(FAILURE_DETECTOR_LENGTH_THRESHOLD, "failure detector length threshold")
+              .withRequiredArg()
+              .describedAs("length-threshold")
               .ofType(Integer.class);
         parser.accepts(HELP);
 
@@ -642,6 +692,19 @@ public class Benchmark {
                                                STORAGE_CONFIGURATION_CLASS,
                                                BdbStorageConfiguration.class.getName()));
             }
+
+            if(options.has(ROUTING_TIMEOUT))
+                mainProps.put(ROUTING_TIMEOUT, (Integer) options.valueOf(ROUTING_TIMEOUT));
+            if(options.has(FAILURE_DETECTOR_IMPL))
+                mainProps.put(FAILURE_DETECTOR_IMPL, (String) options.valueOf(FAILURE_DETECTOR_IMPL));
+            if(options.has(FAILURE_DETECTOR_INTERVAL))
+                mainProps.put(FAILURE_DETECTOR_INTERVAL, (Integer) options.valueOf(FAILURE_DETECTOR_INTERVAL));
+            if(options.has(FAILURE_DETECTOR_THRESHOLD))
+                mainProps.put(FAILURE_DETECTOR_THRESHOLD, (Integer) options.valueOf(FAILURE_DETECTOR_THRESHOLD));
+            if(options.has(FAILURE_DETECTOR_COUNT_MIN))
+                mainProps.put(FAILURE_DETECTOR_COUNT_MIN, (Integer) options.valueOf(FAILURE_DETECTOR_COUNT_MIN));
+            if(options.has(FAILURE_DETECTOR_LENGTH_THRESHOLD))
+                mainProps.put(FAILURE_DETECTOR_LENGTH_THRESHOLD, (Integer) options.valueOf(FAILURE_DETECTOR_LENGTH_THRESHOLD));
 
             mainProps.put(VERBOSE, getCmdBoolean(options, VERBOSE));
             mainProps.put(VERIFY, getCmdBoolean(options, VERIFY));

@@ -87,6 +87,11 @@ public abstract class AbstractFailureDetector implements FailureDetector {
         return failureDetectorConfig;
     }
 
+    @JmxGetter(name = "config", description = "The configuration")
+    public String getConfigAsString() {
+        return getConfig().toString();
+    }
+
     @JmxGetter(name = "availableNodes", description = "The available nodes")
     public String getAvailableNodes() {
         List<String> list = new ArrayList<String>();

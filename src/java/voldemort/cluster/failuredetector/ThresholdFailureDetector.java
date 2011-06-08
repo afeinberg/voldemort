@@ -168,10 +168,13 @@ public class ThresholdFailureDetector extends AsyncRecoveryFailureDetector {
                     if(logger.isTraceEnabled())
                         logger.trace("Node " + node.getId() + " percentage: " + percentage + "%");
 
-                    if(percentage >= getConfig().getThreshold() && successDelta > 0)
-                        setAvailable(node);
-                    else if (successDelta < 1)
+                    if(percentage >= getConfig().getThreshold()) {
+                        if(successDelta > 0)
+                            setAvailable(node);
+                    } else if (successDelta < 1) {
+                        // logger.info("Setting as unavailable. Percentage = " + percentage);
                         setUnavailable(node, e);
+                    }
                 }
             }
         }

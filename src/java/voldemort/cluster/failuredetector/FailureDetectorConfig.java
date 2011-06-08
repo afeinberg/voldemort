@@ -576,4 +576,20 @@ public class FailureDetectorConfig {
         return this;
     }
 
+    @Override
+    public String toString() {
+        return "FailureDetectorConfig{" +
+               "implementationClassName='" + implementationClassName + '\'' +
+               ", bannagePeriod=" + bannagePeriod +
+               ", threshold=" + threshold +
+               ", thresholdCountMinimum=" + thresholdCountMinimum +
+               ", thresholdInterval=" + thresholdInterval +
+               ", asyncRecoveryInterval=" + asyncRecoveryInterval +
+               ", catastrophicErrorTypes=" + catastrophicErrorTypes +
+               ", requestLengthThreshold=" + requestLengthThreshold +
+               ", nodes=" + nodes +
+               ", storeVerifier=" + storeVerifier +
+               ", time=" + time +
+               '}';
+    }
 }
