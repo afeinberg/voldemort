@@ -136,4 +136,8 @@ public abstract class AbstractQuotaEnforcingStore<K, V, T>
     public void truncate() {
         innerStorageEngine.truncate();
     }
+
+    public boolean isPartitionAware() {
+        return innerStorageEngine.isPartitionAware();
+    }
 }

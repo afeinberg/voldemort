@@ -1399,6 +1399,7 @@ public class VoldemortConfig implements Serializable {
 
     public void setMaxParallelStoresRebalancing(boolean rebalancingOptimization) {
         this.rebalancingOptimization = rebalancingOptimization;
+    }
 
     public boolean isQuotaEnabled() {
         return enableQuota;
