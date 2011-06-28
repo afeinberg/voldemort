@@ -56,13 +56,14 @@ public class DiskQuotaIntegrationTest {
             config.setEnforceQuota(true);
             config.setQuotaVerificationFrequencyMs(10000);
             config.setBdbMaxLogFileSize(1000000);
-            config.setBdbCleanerThreads(11);
+            config.setBdbCleanerThreads(3);
             config.setBdbCleanerMinUtilization(90);
             config.setBdbCleanerMinFileUtilization(50);
             config.setBdbOneEnvPerStore(true);
-            config.setBdbCheckpointMs(500);
+            config.setBdbCheckpointMs(1000);
             config.setBdbCheckpointBytes(4096);
         }
+
         cluster = ServerTestUtils.getLocalCluster(2, new int [][] { { 0, 2 },  { 1, 3 } });
 
         for(int i = 0; i < 2; i++) {
