@@ -2,16 +2,16 @@ package voldemort.server.scheduler.quota;
 
 
 import org.apache.log4j.Logger;
-import voldemort.store.quota.AbstractQuotaEnforcingStore;
+import voldemort.store.quota.DiskQuotaEnforcingStore;
 
 public class QuotaVerificationJob<K, V, T> implements Runnable {
 
     private final static Logger logger = Logger.getLogger(QuotaVerificationJob.class);
 
-    private final AbstractQuotaEnforcingStore<K, V, T> store;
+    private final DiskQuotaEnforcingStore<K, V, T> store;
     private final String description;
 
-    public QuotaVerificationJob(AbstractQuotaEnforcingStore<K, V, T> store,
+    public QuotaVerificationJob(DiskQuotaEnforcingStore<K, V, T> store,
                                 String description) {
         this.store = store;
         this.description = description;

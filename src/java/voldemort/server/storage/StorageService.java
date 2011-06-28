@@ -70,7 +70,6 @@ import voldemort.store.logging.LoggingStore;
 import voldemort.store.metadata.MetadataStore;
 import voldemort.store.metadata.MetadataStoreListener;
 import voldemort.store.nonblockingstore.NonblockingStore;
-import voldemort.store.quota.AbstractQuotaEnforcingStore;
 import voldemort.store.quota.DiskQuotaEnforcingStore;
 import voldemort.store.quota.Quota;
 import voldemort.store.quota.QuotaAction;
@@ -555,7 +554,7 @@ public class StorageService extends AbstractService {
 
     private void scheduleQuotaVerificationJob(Quota quota,
                                               String description,
-                                              AbstractQuotaEnforcingStore<ByteArray, byte[], byte[]> store) {
+                                              DiskQuotaEnforcingStore<ByteArray, byte[], byte[]> store) {
         GregorianCalendar cal = new GregorianCalendar();
         cal.add(Calendar.SECOND,
                 (int) (voldemortConfig.getQuotaVerificationFrequencyMs() / Time.MS_PER_SECOND));
