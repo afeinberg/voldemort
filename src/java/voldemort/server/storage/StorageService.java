@@ -328,7 +328,10 @@ public class StorageService extends AbstractService {
                     mutableEngine = enforcingStore;
                 }
             }
-            registerEngine(mutableEngine, isReadOnly, storeDef.getType());
+            registerEngine(mutableEngine,
+                           isReadOnly,
+                           storeDef.getType(),
+                           voldemortConfig.isQuotaEnabled() ? storeDef.getRateLimit() : null);
 
             if(voldemortConfig.isServerRoutingEnabled())
                 registerNodeStores(storeDef, metadata.getCluster(), voldemortConfig.getNodeId());
@@ -355,11 +358,11 @@ public class StorageService extends AbstractService {
                                                                                .getNumberOfNodes()));
     }
 
-    public <K, V, T> RateLimitingStore<K, V, T> createRateLimitingStore(StorageEngine<K, V, T> storageEngine,
+    public <K, V, T> RateLimitingStore<K, V, T> createRateLimitingStore(Store<K, V, T> store,
                                                                         Quota quota) {
         QuotaAction quotaAction = new ViolatorTrackingAction(rateLimitStatusJmx,
-                                                             storageEngine.getName());
-        return new RateLimitingStore<K, V, T>(storageEngine,
+                                                             store.getName());
+        return new RateLimitingStore<K, V, T>(store,
                                               quota,
                                               quotaAction,
                                               voldemortConfig.getRateLimitDurationMs(),
@@ -426,16 +429,24 @@ public class StorageService extends AbstractService {
         engine.close();
     }
 
+    public void registerEngine(StorageEngine<ByteArray, byte[], byte[]> engine,
+                               boolean isReadOnly,
+                               String storeType) {
+        registerEngine(engine, isReadOnly, storeType, null);
+    }
+
     /**
      * Register the given engine with the storage repository
      * 
      * @param engine Register the storage engine
      * @param isReadOnly Boolean indicating if this store is read-only
      * @param storeType The type of the store
+     * @param quota Quota object or null if none
      */
     public void registerEngine(StorageEngine<ByteArray, byte[], byte[]> engine,
                                boolean isReadOnly,
-                               String storeType) {
+                               String storeType,
+                               Quota quota) {
         Cluster cluster = this.metadata.getCluster();
         storeRepository.addStorageEngine(engine);
 
@@ -450,6 +461,9 @@ public class StorageService extends AbstractService {
             store = new LoggingStore<ByteArray, byte[], byte[]>(store,
                                                                 cluster.getName(),
                                                                 SystemTime.INSTANCE);
+        if(quota != null && voldemortConfig.isQuotaEnabled())
+            store = createRateLimitingStore(store, quota);
+
         if(!isSlop) {
             if(voldemortConfig.isEnableRebalanceService() && !isReadOnly && !isMetadata && !isView) {
                 store = new RedirectingStore(store,
