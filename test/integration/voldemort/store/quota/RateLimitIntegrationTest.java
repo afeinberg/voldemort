@@ -24,6 +24,7 @@ public class RateLimitIntegrationTest {
 
     private final static String STORES_XML_FILE = "test/common/voldemort/config/stores.xml";
     private static final String STORE_NAME = "test-rate-limit";
+    private static final String SAFE_STORE_NAME = "test-disk-quota";
 
     private final SocketStoreFactory socketStoreFactory = new ClientRequestExecutorPool(2,
                                                                                         10000,
@@ -121,6 +122,25 @@ public class RateLimitIntegrationTest {
 
     @Test
     public void testMultipleStores() {
-        // TODO: Test the impact of violator stores on non-violators
+        String bootstrapUrl = cluster.getNodeById(0).getSocketUrl().toString();
+        ClientConfig config = new ClientConfig().setBootstrapUrls(bootstrapUrl);
+        StoreClientFactory factory = new SocketStoreClientFactory(config);
+
+        StoreClient<String, String> safeClient = factory.getStoreClient(SAFE_STORE_NAME);
+
+        boolean caughtException = false;
+        try {
+            for(int i = 0; i < 2000; i++) {
+                String str = Integer.toString(i);
+                client.put(str, str);
+            }
+        } catch(RateLimitExceededException re) {
+            caughtException = true;
+        }
+
+        assertTrue("caught a single violator", caughtException);
+
+        safeClient.put("hello", "world");
+        assertEquals(safeClient.getValue("hello"), "world");
     }
 }
