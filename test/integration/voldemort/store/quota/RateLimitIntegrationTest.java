@@ -46,6 +46,7 @@ public class RateLimitIntegrationTest {
                                                              new Properties());
         }
         for(VoldemortConfig config: configs) {
+            config.setRateLimitVerificationFrequencyMs(500);
             config.setEnableQuota(true);
             config.setEnforceQuota(true);
         }
@@ -78,12 +79,23 @@ public class RateLimitIntegrationTest {
 
     @Test
     public void testNormalState() {
-        // TODO: Test normal operation
+        client.put("hello", "world");
+        assertEquals(client.getValue("hello"), "world");
     }
 
     @Test
     public void testSingleViolator() {
-        // TODO: Test that a single violator is banned
+        boolean caughtException = false;
+        try {
+            for(int i = 0; i < 2000; i++) {
+                String str = Integer.toString(i);
+                client.put(str, str);
+            }
+        } catch(RateLimitExceededException re) {
+            caughtException = true;
+        }
+
+        assertTrue("caught a single violator", caughtException);
     }
 
     @Test

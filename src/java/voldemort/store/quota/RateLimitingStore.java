@@ -117,6 +117,7 @@ public class RateLimitingStore<K, V, T> extends DelegatingStore<K, V, T> {
         } finally {
             requestCounter.addRequest(System.nanoTime() - start);
         }
+
     }
 
     @Override
