@@ -1,6 +1,5 @@
 package voldemort.store.quota;
 
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -43,7 +42,7 @@ public class RateLimitingStoreTest {
     public void testGetThroughput() {
         for(int i = 0; i < 2000; i++)
             rlStore.put("foo", Versioned.value("bar"), null);
-        assertTrue(rlStore.getThroughput() >= 1000);
+        assertTrue("getThroughput works as expected", rlStore.getThroughput() >= 1000);
     }
 
     @Test
@@ -67,13 +66,42 @@ public class RateLimitingStoreTest {
             exceptionCaught = true;
         }
 
-        assertTrue(exceptionCaught);
+        assertTrue("RateLimitExceededException thrown", exceptionCaught);
         verify(action).hardLimitExceeded();
     }
 
     @Test
-    public void testHardLimitBanAfterViolation() {
-        // TODO: implement
+    public void testHardLimitBanAfterViolation() throws Exception {
+        for(int i = 0; i < 2000; i++)
+            rlStore.put("foo", Versioned.value("bar"), null);
+        rlStore.verifyLimits();
+
+        boolean exceptionCaught = false;
+        try {
+            rlStore.put("foo", Versioned.value("bar"), null);
+        } catch(RateLimitExceededException e) {
+            exceptionCaught = true;
+        }
+        assertTrue("RateLimitExceededException thrown", exceptionCaught);
+        verify(action).hardLimitExceeded();
+
+        exceptionCaught = false;
+        try {
+            Thread.sleep(100);
+            rlStore.put("a", Versioned.value("b"), null);
+        } catch(RateLimitExceededException e) {
+            exceptionCaught = true;
+        }
+        assertTrue("RateLimitExceededException still thrown after 100 ms", exceptionCaught);
+
+        exceptionCaught = false;
+        try {
+            Thread.sleep(2000);
+            rlStore.put("a", Versioned.value("b"), null);
+        } catch(RateLimitExceededException e) {
+            exceptionCaught = true;
+        }
+        assertFalse("RateLimitExceededException no longer thrown after 2000 ms", exceptionCaught);
     }
 
     @Test
@@ -110,6 +138,6 @@ public class RateLimitingStoreTest {
             exceptionCaught = true;
         }
 
-        assertFalse(exceptionCaught);
+        assertFalse("recovered from hard limit violation", exceptionCaught);
     }
 }

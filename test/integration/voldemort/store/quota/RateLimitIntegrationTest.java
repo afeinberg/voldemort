@@ -82,7 +82,7 @@ public class RateLimitIntegrationTest {
     @Test
     public void testNormalState() {
         client.put("hello", "world");
-        assertEquals(client.getValue("hello"), "world");
+        assertEquals("normal operation", client.getValue("hello"), "world");
     }
 
     @Test
@@ -96,7 +96,6 @@ public class RateLimitIntegrationTest {
         } catch(RateLimitExceededException re) {
             caughtException = true;
         }
-
         assertTrue("caught a single violator", caughtException);
     }
 
@@ -111,13 +110,17 @@ public class RateLimitIntegrationTest {
         } catch(RateLimitExceededException re) {
             caughtException = true;
         }
-
         assertTrue("caught a single violator", caughtException);
 
-        Thread.sleep(5000);
-
-        client.put("hello", "world");
-        assertEquals(client.getValue("hello"), "world");
+        caughtException = false;
+        try {
+            Thread.sleep(5000);
+            client.put("hello", "world");
+            assertEquals("put works as expected", client.getValue("hello"), "world");
+        } catch(RateLimitExceededException e) {
+            caughtException = true;
+        }
+        assertFalse("recovered, no exception thrown", caughtException);
     }
 
     @Test
@@ -125,10 +128,9 @@ public class RateLimitIntegrationTest {
         String bootstrapUrl = cluster.getNodeById(0).getSocketUrl().toString();
         ClientConfig config = new ClientConfig().setBootstrapUrls(bootstrapUrl);
         StoreClientFactory factory = new SocketStoreClientFactory(config);
-
         StoreClient<String, String> safeClient = factory.getStoreClient(SAFE_STORE_NAME);
-
         boolean caughtException = false;
+
         try {
             for(int i = 0; i < 2000; i++) {
                 String str = Integer.toString(i);
@@ -137,10 +139,15 @@ public class RateLimitIntegrationTest {
         } catch(RateLimitExceededException re) {
             caughtException = true;
         }
-
         assertTrue("caught a single violator", caughtException);
 
-        safeClient.put("hello", "world");
-        assertEquals(safeClient.getValue("hello"), "world");
+        caughtException = false;
+        try {
+            safeClient.put("hello", "world");
+            assertEquals("put works as expected", safeClient.getValue("hello"), "world");
+        } catch(RateLimitExceededException re) {
+            caughtException = true;
+        }
+        assertFalse("did not catch a violator on a non-limited store", caughtException);
     }
 }
