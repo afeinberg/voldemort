@@ -49,6 +49,7 @@ public class RateLimitIntegrationTest {
             config.setRateLimitVerificationFrequencyMs(500);
             config.setEnableQuota(true);
             config.setEnforceQuota(true);
+            config.setRateLimitBannageIntervalMs(2000);
         }
 
         cluster = ServerTestUtils.getLocalCluster(2, new int [][] { { 0, 2 },  { 1, 3 } });
@@ -99,8 +100,23 @@ public class RateLimitIntegrationTest {
     }
 
     @Test
-    public void testSingleViolatorRecovery() {
-        // TODO: Test that a single violator recovers
+    public void testSingleViolatorRecovery() throws Exception {
+        boolean caughtException = false;
+        try {
+            for(int i = 0; i < 2000; i++) {
+                String str = Integer.toString(i);
+                client.put(str, str);
+            }
+        } catch(RateLimitExceededException re) {
+            caughtException = true;
+        }
+
+        assertTrue("caught a single violator", caughtException);
+
+        Thread.sleep(5000);
+
+        client.put("hello", "world");
+        assertEquals(client.getValue("hello"), "world");
     }
 
     @Test
