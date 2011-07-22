@@ -1,7 +1,9 @@
 package voldemort.metrics;
 
+import com.google.common.collect.ImmutableSet;
 import voldemort.VoldemortException;
 import voldemort.annotations.concurrency.Threadsafe;
+import voldemort.utils.Pair;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,20 +13,20 @@ import java.util.Map;
 public class SensorRegistry {
 
     // Using a non-concurrent map as all access to it will be synchronized
-    private final Map<String, Object> sensors;
+    private final Map<Pair<String, String>, Object> sensors;
     private final Collection<SensorRegistryListener> listeners;
 
     public SensorRegistry(Collection<SensorRegistryListener> listeners) {
         this.listeners = listeners;
-        sensors = new HashMap<String, Object>();
+        sensors = new HashMap<Pair<String, String>, Object>();
     }
 
     public void registerSensor(String domain, String type, Object object) {
-        String objectName = createSensorName(domain, type);
+        Pair<String, String> objectKey = Pair.create(domain, type);
         synchronized(this) {
-            if(sensors.containsKey(objectName))
+            if(sensors.containsKey(objectKey))
                 unregisterSensor(domain, type);
-            sensors.put(objectName, object);
+            sensors.put(objectKey, object);
         }
 
         for(SensorRegistryListener listener: listeners)
@@ -32,15 +34,15 @@ public class SensorRegistry {
     }
 
     public void unregisterSensor(String domain, String type) {
-        String objectName = createSensorName(domain, type);
+        Pair<String, String> objectKey = Pair.create(domain, type);
         synchronized(this) {
-            if(!sensors.containsKey(objectName))
+            if(!sensors.containsKey(objectKey))
                 throw new VoldemortException("No sensor for domain "
                                              + domain
                                              + ", type "
                                              + type
                                              + " exists.");
-            sensors.remove(objectName);
+            sensors.remove(objectKey);
         }
 
         for(SensorRegistryListener listener: listeners)
@@ -48,14 +50,11 @@ public class SensorRegistry {
     }
 
     public synchronized Object getSensor(String domain, String type) {
-        return sensors.get(createSensorName(domain, type));
+        return sensors.get(Pair.create(domain, type));
 
     }
 
-    private static String createSensorName(String domain, String type) {
-        // Mimics the object names used by JMX
-        return domain + ":type=" + type;
+    public Collection<Pair<String, String>> getSensors() {
+        return ImmutableSet.copyOf(sensors.keySet());
     }
-
-
 }
