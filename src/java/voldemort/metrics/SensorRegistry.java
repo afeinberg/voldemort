@@ -51,10 +51,9 @@ public class SensorRegistry {
 
     public synchronized Object getSensor(String domain, String type) {
         return sensors.get(Pair.create(domain, type));
-
     }
 
-    public Collection<Pair<String, String>> getSensors() {
+    public synchronized Collection<Pair<String, String>> getSensors() {
         return ImmutableSet.copyOf(sensors.keySet());
     }
 }
