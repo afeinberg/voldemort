@@ -22,6 +22,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import voldemort.VoldemortException;
@@ -30,6 +31,8 @@ import voldemort.client.protocol.RequestFormatType;
 import voldemort.client.protocol.admin.AdminClient;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.metrics.SensorRegistry;
+import voldemort.metrics.SensorRegistryListener;
 import voldemort.server.gossip.GossipService;
 import voldemort.server.http.HttpService;
 import voldemort.server.jmx.JmxService;
@@ -71,6 +74,7 @@ public class VoldemortServer extends AbstractService {
     private final StoreRepository storeRepository;
     private final VoldemortConfig voldemortConfig;
     private final MetadataStore metadata;
+    private final SensorRegistry sensorRegistry;
     private AsyncOperationService asyncService;
 
     public VoldemortServer(VoldemortConfig config) {
@@ -81,6 +85,7 @@ public class VoldemortServer extends AbstractService {
                                                         voldemortConfig.getNodeId());
         this.identityNode = metadata.getCluster().getNodeById(voldemortConfig.getNodeId());
         this.services = createServices();
+        this.sensorRegistry = createSensorRegistry();
     }
 
     public VoldemortServer(VoldemortConfig config, Cluster cluster) {
@@ -98,10 +103,15 @@ public class VoldemortServer extends AbstractService {
         this.metadata = new MetadataStore(metadataInnerEngine, voldemortConfig.getNodeId());
 
         this.services = createServices();
+        this.sensorRegistry = createSensorRegistry();
     }
 
     public AsyncOperationService getAsyncRunner() {
         return asyncService;
+    }
+
+    private SensorRegistry createSensorRegistry() {
+        return new SensorRegistry(new ArrayList<SensorRegistryListener>());
     }
 
     private List<VoldemortService> createServices() {
@@ -295,6 +305,10 @@ public class VoldemortServer extends AbstractService {
 
     public MetadataStore getMetadataStore() {
         return metadata;
+    }
+
+    public SensorRegistry getSensorRegistry() {
+        return sensorRegistry;
     }
 
     @JmxOperation(description = "force restore data from replication")
