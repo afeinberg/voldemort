@@ -111,7 +111,10 @@ public class VoldemortServer extends AbstractService {
     }
 
     private SensorRegistry createSensorRegistry() {
-        return new SensorRegistry(new ArrayList<SensorRegistryListener>());
+        if(voldemortConfig.isMetricsEnabled())
+            return new SensorRegistry(new ArrayList<SensorRegistryListener>());
+        else
+            return null;
     }
 
     private List<VoldemortService> createServices() {

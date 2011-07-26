@@ -3,6 +3,7 @@ package voldemort.metrics;
 import com.google.common.collect.ImmutableSet;
 import voldemort.VoldemortException;
 import voldemort.annotations.concurrency.Threadsafe;
+import voldemort.utils.JmxUtils;
 import voldemort.utils.Pair;
 
 import java.util.Collection;
@@ -19,6 +20,10 @@ public class SensorRegistry {
     public SensorRegistry(Collection<SensorRegistryListener> listeners) {
         this.listeners = listeners;
         sensors = new HashMap<Pair<String, String>, Object>();
+    }
+
+    public void registerSensor(String type, Object object) {
+        registerSensor(JmxUtils.getPackageName(object.getClass()), type, object);
     }
 
     public void registerSensor(String domain, String type, Object object) {
