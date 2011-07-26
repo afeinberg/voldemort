@@ -1,6 +1,8 @@
 package voldemort.server.http.gui;
 
+import voldemort.VoldemortException;
 import voldemort.annotations.Experimental;
+import voldemort.annotations.metrics.Attribute;
 import voldemort.metrics.SensorRegistry;
 import voldemort.server.VoldemortServer;
 import voldemort.server.http.VoldemortServletContextListener;
@@ -11,6 +13,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.lang.reflect.Method;
 
 /**
  * Proof of concept: exposing same statistics as through JMX, but via HTTP
@@ -39,6 +43,10 @@ public class MetricsServlet extends HttpServlet {
         String sensorDomain = request.getParameter("domain");
         String sensorType = request.getParameter("type");
         SensorRegistry registry = server.getSensorRegistry();
+        if(registry == null) {
+            response.sendError(HttpServletResponse.SC_NO_CONTENT);
+            return;
+        }
 
         Object sensorObject = registry.getSensor(sensorDomain, sensorType);
         if(sensorObject == null) {
@@ -49,7 +57,54 @@ public class MetricsServlet extends HttpServlet {
         outputJSON(response, sensorObject);
     }
 
-    protected void outputJSON(HttpServletResponse response, Object sensorObject) {
-        // TODO: examine annotations, invoke methods and print the object
+    protected void outputJSON(HttpServletResponse response, Object sensorObject)
+            throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        Class<?> cls = sensorObject.getClass();
+        int i = 0;
+        for(Method method: cls.getDeclaredMethods()) {
+            if(method.isAnnotationPresent(Attribute.class)) {
+                Attribute attribute = method.getAnnotation(Attribute.class);
+
+                if(i++ > 0)
+                    sb.append(", ");
+
+                sb.append("  \"");
+                sb.append(attribute.name());
+                sb.append("\": {");
+
+                sb.append("\n    \"description\": \"");
+                sb.append(attribute.description());
+                sb.append("\", ");
+
+                sb.append("\n    \"data_type\": \"");
+                sb.append(attribute.dataType());
+                sb.append("\", ");
+
+                sb.append("\n    \"metric_type\": \"");
+                sb.append(attribute.metricType());
+                sb.append("\", ");
+
+                sb.append("\n   \"value\": \"");
+                try {
+                    sb.append(method.invoke(sensorObject));
+                } catch(Exception e) {
+                    response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    return;
+                }
+                sb.append("\"\n  }\n");
+            }
+        }
+        sb.append("}");
+
+        try {
+            response.setContentType("text/plain");
+            OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream());
+            writer.write(sb.toString());
+            writer.flush();
+        } catch(Exception e) {
+            throw new VoldemortException(e);
+        }
     }
 }
