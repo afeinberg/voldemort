@@ -48,6 +48,7 @@ import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.FailureDetector;
 import voldemort.cluster.failuredetector.FailureDetectorConfig;
 import voldemort.cluster.failuredetector.ServerStoreVerifier;
+import voldemort.metrics.SensorRegistry;
 import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyFactory;
 import voldemort.server.AbstractService;
@@ -111,6 +112,7 @@ public class StorageService extends AbstractService {
     private final VoldemortConfig voldemortConfig;
     private final StoreRepository storeRepository;
     private final SchedulerService scheduler;
+    private final SensorRegistry sensorRegistry;
     private final MetadataStore metadata;
 
     // Common permit shared by all job which do a disk scan
@@ -125,9 +127,11 @@ public class StorageService extends AbstractService {
     public StorageService(StoreRepository storeRepository,
                           MetadataStore metadata,
                           SchedulerService scheduler,
+                          SensorRegistry sensorRegistry,
                           VoldemortConfig config) {
         super(ServiceType.STORAGE);
         this.voldemortConfig = config;
+        this.sensorRegistry = sensorRegistry;
         this.scheduler = scheduler;
         this.storeRepository = storeRepository;
         this.metadata = metadata;
@@ -436,6 +440,9 @@ public class StorageService extends AbstractService {
                                            JmxUtils.createModelMBean(new StoreStatsJmx(statStore.getStats())),
                                            name);
                 }
+            }
+            if(voldemortConfig.isMetricsEnabled()) {
+                sensorRegistry.registerSensor(store.getName(), store);
             }
         }
 

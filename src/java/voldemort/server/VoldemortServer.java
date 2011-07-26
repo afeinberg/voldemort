@@ -126,6 +126,7 @@ public class VoldemortServer extends AbstractService {
         StorageService storageService = new StorageService(storeRepository,
                                                            metadata,
                                                            scheduler,
+                                                           sensorRegistry,
                                                            voldemortConfig);
 
         asyncService = new AsyncOperationService(scheduler, ASYNC_REQUEST_CACHE_SIZE);

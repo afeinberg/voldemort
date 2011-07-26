@@ -38,7 +38,7 @@ public class StorageServiceTest extends TestCase {
         this.storeDefs = ServerTestUtils.getStoreDefs(2);
         this.storeRepository = new StoreRepository();
         MetadataStore mdStore = ServerTestUtils.createMetadataStore(cluster, storeDefs);
-        storage = new StorageService(storeRepository, mdStore, scheduler, config);
+        storage = new StorageService(storeRepository, mdStore, scheduler, null, config);
         storage.start();
     }
 
