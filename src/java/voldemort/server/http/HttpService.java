@@ -33,6 +33,7 @@ import voldemort.server.ServiceType;
 import voldemort.server.StoreRepository;
 import voldemort.server.VoldemortServer;
 import voldemort.server.http.gui.AdminServlet;
+import voldemort.server.http.gui.MetricsServlet;
 import voldemort.server.http.gui.ReadOnlyStoreManagementServlet;
 import voldemort.server.http.gui.StatusServlet;
 import voldemort.server.http.gui.VelocityEngine;
@@ -104,6 +105,7 @@ public class HttpService extends AbstractService {
                                "/read-only/mgmt");
             context.addServlet(new ServletHolder(new StatusServlet(server, velocityEngine)),
                                "/server-status");
+            context.addServlet(new ServletHolder(new MetricsServlet(server)), "/metrics");
             this.context = context;
             this.httpServer = httpServer;
             this.httpServer.start();

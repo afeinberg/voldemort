@@ -442,7 +442,7 @@ public class StorageService extends AbstractService {
                 }
             }
             if(voldemortConfig.isMetricsEnabled()) {
-                sensorRegistry.registerSensor(store.getName(), store);
+                sensorRegistry.registerSensor(store.getName(), new StoreStatsJmx(statStore.getStats()));
             }
         }
 

@@ -1,5 +1,6 @@
 package voldemort.server.http.gui;
 
+import org.apache.log4j.Logger;
 import voldemort.VoldemortException;
 import voldemort.annotations.Experimental;
 import voldemort.annotations.metrics.Attribute;
@@ -25,10 +26,12 @@ public class MetricsServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1;
 
+    private static final Logger logger = Logger.getLogger(MetricsServlet.class);
+
     private VoldemortServer server;
 
     public MetricsServlet(VoldemortServer server) {
-
+        this.server = server;
     }
 
     @Override
@@ -50,6 +53,8 @@ public class MetricsServlet extends HttpServlet {
 
         Object sensorObject = registry.getSensor(sensorDomain, sensorType);
         if(sensorObject == null) {
+            if(logger.isInfoEnabled())
+                logger.info("Not found domain=" + sensorDomain + ", type=" + sensorType);
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
@@ -68,7 +73,7 @@ public class MetricsServlet extends HttpServlet {
                 Attribute attribute = method.getAnnotation(Attribute.class);
 
                 if(i++ > 0)
-                    sb.append(", ");
+                    sb.append(",\n");
 
                 sb.append("  \"");
                 sb.append(attribute.name());
@@ -86,17 +91,17 @@ public class MetricsServlet extends HttpServlet {
                 sb.append(attribute.metricType());
                 sb.append("\", ");
 
-                sb.append("\n   \"value\": \"");
+                sb.append("\n    \"value\": \"");
                 try {
                     sb.append(method.invoke(sensorObject));
                 } catch(Exception e) {
                     response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
                     return;
                 }
-                sb.append("\"\n  }\n");
+                sb.append("\"\n  }");
             }
         }
-        sb.append("}");
+        sb.append("\n}\n");
 
         try {
             response.setContentType("text/plain");

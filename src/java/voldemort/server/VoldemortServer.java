@@ -84,8 +84,8 @@ public class VoldemortServer extends AbstractService {
         this.metadata = MetadataStore.readFromDirectory(new File(this.voldemortConfig.getMetadataDirectory()),
                                                         voldemortConfig.getNodeId());
         this.identityNode = metadata.getCluster().getNodeById(voldemortConfig.getNodeId());
-        this.services = createServices();
         this.sensorRegistry = createSensorRegistry();
+        this.services = createServices();
     }
 
     public VoldemortServer(VoldemortConfig config, Cluster cluster) {
@@ -101,9 +101,8 @@ public class VoldemortServer extends AbstractService {
                                 new Versioned<String>(new ClusterMapper().writeCluster(cluster)),
                                 null);
         this.metadata = new MetadataStore(metadataInnerEngine, voldemortConfig.getNodeId());
-
-        this.services = createServices();
         this.sensorRegistry = createSensorRegistry();
+        this.services = createServices();
     }
 
     public AsyncOperationService getAsyncRunner() {
@@ -111,8 +110,10 @@ public class VoldemortServer extends AbstractService {
     }
 
     private SensorRegistry createSensorRegistry() {
-        if(voldemortConfig.isMetricsEnabled())
+        if(voldemortConfig.isMetricsEnabled()) {
+            logger.info("Creating sensor registry");
             return new SensorRegistry(new ArrayList<SensorRegistryListener>());
+        }
         else
             return null;
     }
