@@ -558,6 +558,7 @@ public class ServerTestUtils {
         props.put("bdb.write.transactions", "true");
         props.put("bdb.flush.transactions", "true");
         props.put("jmx.enable", "false");
+        props.put("metrics.enable", "false");
         props.put("enable.mysql.engine", "true");
 
         VoldemortConfig config = new VoldemortConfig(props);
