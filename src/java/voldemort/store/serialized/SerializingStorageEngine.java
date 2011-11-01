@@ -16,6 +16,7 @@
 
 package voldemort.store.serialized;
 
+import voldemort.VoldemortException;
 import voldemort.serialization.Serializer;
 import voldemort.store.StorageEngine;
 import voldemort.utils.ByteArray;
@@ -23,6 +24,8 @@ import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.utils.Utils;
 import voldemort.versioning.Versioned;
+
+import java.io.File;
 
 /**
  * A StorageEngine that handles serialization to bytes, transforming each
@@ -125,6 +128,10 @@ public class SerializingStorageEngine<K, V, T> extends SerializingStore<K, V, T>
         public void close() {
             iterator.close();
         }
+    }
+
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
     }
 
     public boolean isPartitionAware() {

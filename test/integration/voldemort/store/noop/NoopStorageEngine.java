@@ -16,6 +16,7 @@
 
 package voldemort.store.noop;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -125,6 +126,10 @@ public class NoopStorageEngine implements StorageEngine<ByteArray, byte[], byte[
         public int size() {
             return value == null ? 0 : 1;
         }
+    }
+
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
     }
 
     public boolean isPartitionAware() {

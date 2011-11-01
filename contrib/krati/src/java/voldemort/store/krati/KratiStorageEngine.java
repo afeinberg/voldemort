@@ -309,6 +309,10 @@ public class KratiStorageEngine implements StorageEngine<ByteArray, byte[], byte
 
     }
 
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
+    }
+
     public boolean isPartitionAware() {
         return false;
     }

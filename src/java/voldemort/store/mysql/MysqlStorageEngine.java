@@ -16,6 +16,7 @@
 
 package voldemort.store.mysql;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -391,6 +392,10 @@ public class MysqlStorageEngine implements StorageEngine<ByteArray, byte[], byte
 
     public List<Version> getVersions(ByteArray key) {
         return StoreUtils.getVersions(get(key, null));
+    }
+
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
     }
 
     public boolean isPartitionAware() {

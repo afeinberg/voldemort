@@ -16,6 +16,7 @@
 
 package voldemort.store.bdb;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -570,5 +571,9 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
 
     public boolean isPartitionAware() {
         return false;
+    }
+
+    public void nativeBackup(File backupDir) {
+
     }
 }

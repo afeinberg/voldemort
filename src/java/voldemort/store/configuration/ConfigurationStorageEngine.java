@@ -240,6 +240,10 @@ public class ConfigurationStorageEngine implements StorageEngine<String, String,
         throw new VoldemortException("Truncate not supported in ConfigurationStorageEngine");
     }
 
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
+    }
+
     public boolean isPartitionAware() {
         return false;
     }

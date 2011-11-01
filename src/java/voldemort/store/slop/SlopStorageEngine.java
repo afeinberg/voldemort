@@ -16,6 +16,7 @@
 
 package voldemort.store.slop;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -126,6 +127,10 @@ public class SlopStorageEngine implements StorageEngine<ByteArray, byte[], byte[
 
     public List<Version> getVersions(ByteArray key) {
         return slopEngine.getVersions(key);
+    }
+
+    public void nativeBackup(File backupDir) {
+        slopEngine.nativeBackup(backupDir);
     }
 
     public boolean isPartitionAware() {

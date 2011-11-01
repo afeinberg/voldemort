@@ -16,6 +16,7 @@
 
 package voldemort.store.memory;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -261,6 +262,10 @@ public class InMemoryStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
         // nothing to do here
         }
 
+    }
+
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
     }
 
     public boolean isPartitionAware() {

@@ -596,6 +596,10 @@ public class ReadOnlyStorageEngine implements StorageEngine<ByteArray, byte[], b
         return StoreUtils.getVersions(get(key, null));
     }
 
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
+    }
+
     public boolean isPartitionAware() {
         return true;
     }

@@ -579,6 +579,10 @@ public class MetadataStore implements StorageEngine<ByteArray, byte[], byte[]> {
         throw new VoldemortException("No metadata found for required key:" + key);
     }
 
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
+    }
+
     public boolean isPartitionAware() {
         return false;
     }

@@ -1,5 +1,6 @@
 package voldemort.store.pausable;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -115,6 +116,10 @@ public class PausableStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
         synchronized(condition) {
             condition.notifyAll();
         }
+    }
+
+    public void nativeBackup(File backupDir) {
+        throw new VoldemortException("nativeBackup not supported");
     }
 
     public boolean isPartitionAware() {

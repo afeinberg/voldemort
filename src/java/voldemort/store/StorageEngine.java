@@ -20,6 +20,8 @@ import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.versioning.Versioned;
 
+import java.io.File;
+
 /**
  * A base storage class which is actually responsible for data persistence. This
  * interface implies all the usual responsibilities of a Store implementation,
@@ -78,4 +80,10 @@ public interface StorageEngine<K, V, T> extends Store<K, V, T> {
      */
     public boolean isPartitionAware();
 
+    /**
+     * Perform a native backup, if supported.
+     *
+     * @param backupDir Directory to backup to
+     */
+    public void nativeBackup(File backupDir);
 }

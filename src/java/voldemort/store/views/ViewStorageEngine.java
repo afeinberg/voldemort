@@ -1,5 +1,6 @@
 package voldemort.store.views;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -216,6 +217,10 @@ public class ViewStorageEngine implements StorageEngine<ByteArray, byte[], byte[
                                                                                  .getVersion());
             return Pair.create(p.getFirst(), newVal);
         }
+    }
+
+    public void nativeBackup(File backupDir) {
+        target.nativeBackup(backupDir);
     }
 
     public boolean isPartitionAware() {

@@ -5,6 +5,8 @@ import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.versioning.Versioned;
 
+import java.io.File;
+
 public class RandomlyFailingDelegatingStore<K, V, T> extends DelegatingStore<K, V, T> implements
         StorageEngine<K, V, T> {
 
@@ -74,5 +76,9 @@ public class RandomlyFailingDelegatingStore<K, V, T> extends DelegatingStore<K, 
 
     public boolean isPartitionAware() {
         return innerStorageEngine.isPartitionAware();
+    }
+
+    public void nativeBackup(File backupDir) {
+        innerStorageEngine.nativeBackup(backupDir);
     }
 }
