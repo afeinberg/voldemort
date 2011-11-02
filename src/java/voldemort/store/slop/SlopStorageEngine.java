@@ -28,6 +28,7 @@ import voldemort.serialization.IdentitySerializer;
 import voldemort.serialization.SlopSerializer;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.serialized.SerializingStorageEngine;
 import voldemort.store.stats.SlopStats;
 import voldemort.utils.ByteArray;
@@ -129,8 +130,8 @@ public class SlopStorageEngine implements StorageEngine<ByteArray, byte[], byte[
         return slopEngine.getVersions(key);
     }
 
-    public void nativeBackup(File backupDir) {
-        slopEngine.nativeBackup(backupDir);
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
+        slopEngine.nativeBackup(backupDir, listener);
     }
 
     public boolean isPartitionAware() {

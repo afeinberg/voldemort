@@ -24,6 +24,7 @@ import voldemort.store.NoSuchCapabilityException;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
@@ -309,7 +310,7 @@ public class KratiStorageEngine implements StorageEngine<ByteArray, byte[], byte
 
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

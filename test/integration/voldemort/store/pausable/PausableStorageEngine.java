@@ -10,6 +10,7 @@ import voldemort.VoldemortException;
 import voldemort.annotations.jmx.JmxOperation;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.memory.InMemoryStorageEngine;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
@@ -118,7 +119,7 @@ public class PausableStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
         }
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

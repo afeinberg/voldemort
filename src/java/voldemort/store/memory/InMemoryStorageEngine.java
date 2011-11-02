@@ -31,6 +31,7 @@ import voldemort.store.NoSuchCapabilityException;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.utils.Utils;
@@ -264,7 +265,7 @@ public class InMemoryStorageEngine<K, V, T> implements StorageEngine<K, V, T> {
 
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

@@ -36,6 +36,7 @@ import voldemort.store.StorageInitializationException;
 import voldemort.store.Store;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.bdb.stats.BdbEnvironmentStats;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
@@ -573,7 +574,7 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
         return false;
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
 
     }
 }

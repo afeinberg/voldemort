@@ -30,6 +30,7 @@ import voldemort.VoldemortException;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.metadata.MetadataStore;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
@@ -240,7 +241,7 @@ public class ConfigurationStorageEngine implements StorageEngine<String, String,
         throw new VoldemortException("Truncate not supported in ConfigurationStorageEngine");
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

@@ -1,6 +1,7 @@
 package voldemort.store;
 
 import voldemort.VoldemortException;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.versioning.Versioned;
@@ -78,7 +79,7 @@ public class RandomlyFailingDelegatingStore<K, V, T> extends DelegatingStore<K, 
         return innerStorageEngine.isPartitionAware();
     }
 
-    public void nativeBackup(File backupDir) {
-        innerStorageEngine.nativeBackup(backupDir);
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
+        innerStorageEngine.nativeBackup(backupDir, listener);
     }
 }

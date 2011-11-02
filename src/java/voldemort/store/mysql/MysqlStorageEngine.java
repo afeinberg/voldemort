@@ -34,6 +34,7 @@ import voldemort.store.PersistenceFailureException;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
@@ -394,7 +395,7 @@ public class MysqlStorageEngine implements StorageEngine<ByteArray, byte[], byte
         return StoreUtils.getVersions(get(key, null));
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

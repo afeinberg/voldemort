@@ -37,6 +37,7 @@ import voldemort.store.NoSuchCapabilityException;
 import voldemort.store.StorageEngine;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.readonly.chunk.ChunkedFileSet;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
@@ -596,7 +597,7 @@ public class ReadOnlyStorageEngine implements StorageEngine<ByteArray, byte[], b
         return StoreUtils.getVersions(get(key, null));
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

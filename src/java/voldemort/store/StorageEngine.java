@@ -16,6 +16,7 @@
 
 package voldemort.store;
 
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
 import voldemort.versioning.Versioned;
@@ -84,6 +85,7 @@ public interface StorageEngine<K, V, T> extends Store<K, V, T> {
      * Perform a native backup, if supported.
      *
      * @param backupDir Directory to backup to
+     * @param listener Listener for backup progress
      */
-    public void nativeBackup(File backupDir);
+    public void nativeBackup(File backupDir, NativeBackupListener listener);
 }

@@ -47,6 +47,7 @@ import voldemort.store.Store;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreDefinition;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.configuration.ConfigurationStorageEngine;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ByteUtils;
@@ -579,7 +580,7 @@ public class MetadataStore implements StorageEngine<ByteArray, byte[], byte[]> {
         throw new VoldemortException("No metadata found for required key:" + key);
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 

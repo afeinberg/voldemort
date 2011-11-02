@@ -13,6 +13,7 @@ import voldemort.store.StorageEngine;
 import voldemort.store.Store;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.StoreUtils;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.store.compress.CompressionStrategy;
 import voldemort.store.serialized.SerializingStore;
 import voldemort.utils.ByteArray;
@@ -219,8 +220,8 @@ public class ViewStorageEngine implements StorageEngine<ByteArray, byte[], byte[
         }
     }
 
-    public void nativeBackup(File backupDir) {
-        target.nativeBackup(backupDir);
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
+        target.nativeBackup(backupDir, listener);
     }
 
     public boolean isPartitionAware() {

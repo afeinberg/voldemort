@@ -19,6 +19,7 @@ package voldemort.store.serialized;
 import voldemort.VoldemortException;
 import voldemort.serialization.Serializer;
 import voldemort.store.StorageEngine;
+import voldemort.store.backup.NativeBackupListener;
 import voldemort.utils.ByteArray;
 import voldemort.utils.ClosableIterator;
 import voldemort.utils.Pair;
@@ -130,7 +131,7 @@ public class SerializingStorageEngine<K, V, T> extends SerializingStore<K, V, T>
         }
     }
 
-    public void nativeBackup(File backupDir) {
+    public void nativeBackup(File backupDir, NativeBackupListener listener) {
         throw new VoldemortException("nativeBackup not supported");
     }
 
