@@ -19,14 +19,14 @@ public class LoggingBackupListener implements NativeBackupListener {
     }
 
     public void backupFiles(int numFiles, long size) {
-        // TODO
+
     }
 
-    public void copyFile(String name, long size) {
-        // TODO
+    public void copyFile(String name, long total, long size) {
+
     }
 
     public void finished() {
-        // TODO
+
     }
 }

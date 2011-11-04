@@ -8,7 +8,7 @@ public interface NativeBackupListener {
 
     public void backupFiles(int numFiles, long size);
 
-    public void copyFile(String name, long size);
+    public void copyFile(String name, long total, long size);
 
     public void finished();
 }

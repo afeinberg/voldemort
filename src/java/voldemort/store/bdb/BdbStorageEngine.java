@@ -575,6 +575,6 @@ public class BdbStorageEngine implements StorageEngine<ByteArray, byte[], byte[]
     }
 
     public void nativeBackup(File backupDir, NativeBackupListener listener) {
-
+        new BdbNativeBackup(environment, backupDir, listener).performBackup();
     }
 }
