@@ -1,12 +1,12 @@
-package voldemort;
+package voldemort.cluster.failuredetector;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import voldemort.VoldemortException;
 import voldemort.cluster.Node;
-import voldemort.cluster.failuredetector.BasicStoreVerifier;
 import voldemort.store.Store;
 import voldemort.store.StoreCapabilityType;
 import voldemort.store.UnreachableStoreException;

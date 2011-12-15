@@ -18,10 +18,12 @@ package voldemort.cluster.failuredetector;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static voldemort.FailureDetectorTestUtils.recordException;
 import static voldemort.FailureDetectorTestUtils.recordSuccess;
-import static voldemort.MutableStoreVerifier.create;
+import static voldemort.cluster.failuredetector.MutableStoreVerifier.create;
 import static voldemort.cluster.failuredetector.FailureDetectorUtils.create;
+import static voldemort.VoldemortTestConstants.getTenNodeCluster;
 
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
@@ -166,4 +168,17 @@ public class ThresholdFailureDetectorTest extends AbstractFailureDetectorTest {
         recordSuccess(failureDetector, node);
     }
 
+    @Test
+    public void testChangeMetadata() throws Exception {
+        cluster = getTenNodeCluster();
+        Node node = cluster.getNodeById(9);
+        failureDetector.recordException(node,
+                                        0,
+                                        new UnreachableStoreException("intentionalerror",
+                                                                      new ConnectException("intentionalerror")));
+
+        assertEquals(false, failureDetector.isAvailable(node));
+        Thread.sleep(failureDetector.getConfig().getAsyncRecoveryInterval() * 2);
+        assertEquals(true, failureDetector.isAvailable(node));
+    }
 }
