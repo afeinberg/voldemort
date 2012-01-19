@@ -76,6 +76,7 @@ public class RebootstrappingStore extends DelegatingStore<ByteArray, byte[], byt
         try {
             Versioned<Cluster> latestCluster = RebalanceUtils.getLatestCluster(new ArrayList<Integer>(),
                                                                                adminClient);
+
             metadata.put(MetadataStore.CLUSTER_KEY, latestCluster.getValue());
 
             checkAndAddNodeStore();

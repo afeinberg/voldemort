@@ -29,6 +29,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import voldemort.cluster.Node;
@@ -40,14 +41,17 @@ import com.google.common.collect.Iterables;
 
 public class ThresholdFailureDetectorTest extends AbstractFailureDetectorTest {
 
+    private MutableStoreVerifier verifier;
+
     @Override
     public FailureDetector createFailureDetector() throws Exception {
+        verifier = create(cluster.getNodes());
         FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig().setImplementationClassName(ThresholdFailureDetector.class.getName())
                                                                                  .setBannagePeriod(BANNAGE_MILLIS)
                                                                                  .setAsyncRecoveryInterval(250)
                                                                                  .setThresholdInterval(500)
                                                                                  .setNodes(cluster.getNodes())
-                                                                                 .setStoreVerifier(create(cluster.getNodes()))
+                                                                                 .setStoreVerifier(verifier)
                                                                                  .setTime(time);
 
         return create(failureDetectorConfig, true);
@@ -171,8 +175,9 @@ public class ThresholdFailureDetectorTest extends AbstractFailureDetectorTest {
     @Test
     public void testChangeMetadata() throws Exception {
         cluster = getTenNodeCluster();
-
+        failureDetector.getConfig().setCluster(cluster);
         Node node = cluster.getNodeById(9);
+        verifier.addNode(node);
         failureDetector.recordException(node,
                                         0,
                                         new UnreachableStoreException("intentionalerror",
