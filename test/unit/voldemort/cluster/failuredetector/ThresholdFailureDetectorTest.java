@@ -171,6 +171,7 @@ public class ThresholdFailureDetectorTest extends AbstractFailureDetectorTest {
     @Test
     public void testChangeMetadata() throws Exception {
         cluster = getTenNodeCluster();
+
         Node node = cluster.getNodeById(9);
         failureDetector.recordException(node,
                                         0,

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 import voldemort.client.ClientConfig;
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.server.VoldemortConfig;
 import voldemort.utils.SystemTime;
@@ -80,6 +81,8 @@ public class FailureDetectorConfig {
     protected StoreVerifier storeVerifier;
 
     protected Time time = SystemTime.INSTANCE;
+
+    protected Cluster cluster;
 
     /**
      * Constructs a new FailureDetectorConfig using all the defaults. This is
@@ -543,6 +546,9 @@ public class FailureDetectorConfig {
      */
 
     public Collection<Node> getNodes() {
+        if(cluster != null) {
+            return cluster.getNodes();
+        }
         return nodes;
     }
 
@@ -577,4 +583,12 @@ public class FailureDetectorConfig {
         return this;
     }
 
+    public Cluster getCluster() {
+        return cluster;
+    }
+
+    public FailureDetectorConfig setCluster(Cluster cluster) {
+        this.cluster = Utils.notNull(cluster);
+        return this;
+    }
 }

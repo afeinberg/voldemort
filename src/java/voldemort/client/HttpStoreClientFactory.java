@@ -35,6 +35,7 @@ import org.apache.http.params.HttpProtocolParams;
 
 import voldemort.client.protocol.RequestFormatFactory;
 import voldemort.client.protocol.RequestFormatType;
+import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
 import voldemort.cluster.failuredetector.ClientStoreVerifier;
 import voldemort.cluster.failuredetector.FailureDetector;
@@ -103,7 +104,7 @@ public class HttpStoreClientFactory extends AbstractStoreClientFactory {
 
     @Override
     protected FailureDetector initFailureDetector(final ClientConfig config,
-                                                  final Collection<Node> nodes) {
+                                                  final Cluster cluster) {
         ClientStoreVerifier storeVerifier = new ClientStoreVerifier() {
 
             @Override
@@ -116,7 +117,7 @@ public class HttpStoreClientFactory extends AbstractStoreClientFactory {
 
         };
 
-        FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig(config).setNodes(nodes)
+        FailureDetectorConfig failureDetectorConfig = new FailureDetectorConfig(config).setCluster(cluster)
                                                                                        .setStoreVerifier(storeVerifier);
 
         return create(failureDetectorConfig, config.isJmxEnabled());

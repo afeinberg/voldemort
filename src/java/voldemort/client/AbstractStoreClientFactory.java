@@ -261,7 +261,7 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
     }
 
     protected abstract FailureDetector initFailureDetector(final ClientConfig config,
-                                                           final Collection<Node> nodes);
+                                                           final Cluster cluster);
 
     public FailureDetector getFailureDetector() {
         // first check: avoids locking as the field is volatile
@@ -274,7 +274,7 @@ public abstract class AbstractStoreClientFactory implements StoreClientFactory {
                 // second check: avoids double initialization
                 result = failureDetector;
                 if(result == null)
-                    failureDetector = result = initFailureDetector(config, cluster.getNodes());
+                    failureDetector = result = initFailureDetector(config, cluster);
             }
         }
 
