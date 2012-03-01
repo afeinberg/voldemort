@@ -1,5 +1,6 @@
 package voldemort.store.stats;
 
+import voldemort.VoldemortException;
 import voldemort.annotations.concurrency.Threadsafe;
 
 import java.util.Arrays;
@@ -58,7 +59,9 @@ public class Histogram {
      */
     public synchronized void insert(int data) {
         int index = findBucket(data);
-        assert(index != -1);
+        if(index == -1) {
+            throw new VoldemortException(data + " can't be bucketed, is invalid!");
+        }
         buckets[index]++;
         size++;
     }
