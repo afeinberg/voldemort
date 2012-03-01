@@ -35,7 +35,7 @@ public class RequestCounter {
         this.time = time;
         this.values = new AtomicReference<Accumulator>(new Accumulator());
         this.durationMS = durationMS;
-        this.histogram = new Histogram(15000, 1);
+        this.histogram = new Histogram(65535, 1);
         this.q95LatencyMs = 0;
         this.q99LatencyMs = 0;
     }
